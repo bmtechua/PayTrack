@@ -14,7 +14,8 @@ struct PayTrackApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainTabView()
+            //HomeView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }
     }
