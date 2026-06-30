@@ -65,7 +65,7 @@ struct CategoriesView: View {
                 }
 
             }
-            .navigationTitle("Категорії")
+            .navigationTitle("categories")
         }
     }
 

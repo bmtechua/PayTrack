@@ -7,11 +7,12 @@
 
 import SwiftUI
 import CoreData
-import Charts
 
 struct HomeView: View {
 
-    @State private var monthlyBudget: Double = 5000
+    @AppStorage("monthlyBudget")
+    private var monthlyBudget: Double = 5000
+    
     @State private var monthOffset: Int = 0
 
     @FetchRequest(
@@ -32,7 +33,7 @@ struct HomeView: View {
 
                 VStack(spacing: 20) {
 
-                    // MARK: - MONTH SWITCHER (SWIPE UI)
+                    // MARK: - MONTH SWITCHER
                     HStack {
 
                         Button {
@@ -57,74 +58,6 @@ struct HomeView: View {
                         }
                     }
                     .padding(.horizontal)
-
-                    // Swipe gesture
-                    .gesture(
-                        DragGesture()
-                            .onEnded { value in
-                                if value.translation.width < -50 {
-                                    monthOffset += 1
-                                }
-                                if value.translation.width > 50 {
-                                    monthOffset -= 1
-                                }
-                            }
-                    )
-
-                    // MARK: - PIE CHART
-                    Text("Витрати по категоріях")
-                        .font(.headline)
-
-                    let category = categoryData()
-
-                    if !category.isEmpty {
-
-                        Chart {
-                            ForEach(category, id: \.0) { item in
-                                SectorMark(
-                                    angle: .value("Сума", item.1)
-                                )
-                                .foregroundStyle(
-                                    by: .value("Категорія", item.0)
-                                )
-                            }
-                        }
-                        .frame(height: 250)
-
-                    } else {
-                        Text("Немає даних")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    // MARK: - LINE CHART
-                    Text("Витрати по днях")
-                        .font(.headline)
-
-                    let daily = dailyData()
-
-                    if !daily.isEmpty {
-
-                        Chart {
-                            ForEach(daily, id: \.0) { item in
-
-                                LineMark(
-                                    x: .value("День", item.0),
-                                    y: .value("Сума", item.1)
-                                )
-                                .interpolationMethod(.catmullRom)
-
-                                PointMark(
-                                    x: .value("День", item.0),
-                                    y: .value("Сума", item.1)
-                                )
-                            }
-                        }
-                        .frame(height: 220)
-
-                    } else {
-                        Text("Немає даних")
-                            .foregroundStyle(.secondary)
-                    }
 
                     // MARK: - MONTH TOTAL
                     VStack {
@@ -208,11 +141,11 @@ struct HomeView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Головна")
+            .navigationTitle("home_title")
         }
     }
 
-    // MARK: - MONTH OFFSET
+    // MARK: - MONTH
     private var selectedMonth: Date {
         Calendar.current.date(
             byAdding: .month,
@@ -242,42 +175,6 @@ struct HomeView: View {
                 equalTo: selectedMonth,
                 toGranularity: .month
             )
-        }
-    }
-
-    // MARK: - PIE DATA
-    private func categoryData() -> [(String, Double)] {
-
-        let grouped = Dictionary(grouping: filteredExpenses()) { expense in
-            expense.category?.name ?? "Без категорії"
-        }
-
-        return grouped.map { key, value in
-            let total = value.reduce(0) { $0 + $1.amount }
-            return (key, total)
-        }
-    }
-
-    // MARK: - LINE DATA
-    private func dailyData() -> [(String, Double)] {
-
-        let calendar = Calendar.current
-
-        let grouped = Dictionary(grouping: filteredExpenses()) { expense in
-
-            guard let date = expense.date else { return "0" }
-
-            let day = calendar.component(.day, from: date)
-            return "\(day)"
-        }
-
-        let sorted = grouped.sorted {
-            Int($0.key) ?? 0 < Int($1.key) ?? 0
-        }
-
-        return sorted.map { key, value in
-            let total = value.reduce(0) { $0 + $1.amount }
-            return (key, total)
         }
     }
 

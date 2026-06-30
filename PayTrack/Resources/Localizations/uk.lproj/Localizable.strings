@@ -1,0 +1,33 @@
+//
+//  Localizable.strings
+//  PayTrack
+//
+//  Created by bmtech on 30.06.2026.
+//
+
+"home_title" = "Головна";
+"analytics_title" = "Аналітика";
+"settings_title" = "Налаштування";
+
+"add_expense" = "Додати витрату";
+
+"this_month" = "Цього місяця";
+"today" = "Сьогодні";
+
+"expenses" = "Витрат";
+
+"budget" = "Бюджет";
+"monthly_limit" = "Ліміт на місяць";
+
+"currency" = "Валюта";
+"language" = "Мова";
+"theme" = "Тема";
+
+"categories" = "Категорії";
+
+"analytics_title" = "Аналітика";
+"this_month" = "Цього місяця";
+"categories" = "Категорії";
+"by_days" = "По днях";
+"top_category" = "Найбільша категорія";
+"no_data" = "Немає даних";

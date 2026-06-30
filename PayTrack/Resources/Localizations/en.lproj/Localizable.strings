@@ -1,0 +1,33 @@
+//
+//  Localizable.strings
+//  PayTrack
+//
+//  Created by bmtech on 30.06.2026.
+//
+
+"home_title" = "Home";
+"analytics_title" = "Analytics";
+"settings_title" = "Settings";
+
+"add_expense" = "Add expense";
+
+"this_month" = "This month";
+"today" = "Today";
+
+"expenses" = "Expenses";
+
+"budget" = "Budget";
+"monthly_limit" = "Monthly limit";
+
+"currency" = "Currency";
+"language" = "Language";
+"theme" = "Theme";
+
+"categories" = "Categories";
+
+"analytics_title" = "Analytics";
+"this_month" = "This month";
+"categories" = "Categories";
+"by_days" = "By days";
+"top_category" = "Top category";
+"no_data" = "No data";

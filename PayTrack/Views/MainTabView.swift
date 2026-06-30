@@ -15,26 +15,51 @@ struct MainTabView: View {
 
             HomeView()
                 .tabItem {
-                    Label("Головна",
-                          systemImage: "house")
+                    Label(
+                        "home_title",
+                        systemImage: "house"
+                    )
                 }
+
+
+            AnalyticsView()
+                .tabItem {
+                    Label(
+                        "analytics_title",
+                        systemImage: "chart.bar"
+                    )
+                }
+
 
             ExpensesListView()
                 .tabItem {
-                    Label("Витрати",
-                          systemImage: "list.bullet")
+                    Label(
+                        "expenses",
+                        systemImage: "list.bullet"
+                    )
                 }
-            
+
+
             CategoriesView()
                 .tabItem {
                     Label(
-                        "Категорії",
+                        "categories",
                         systemImage: "tag"
+                    )
+                }
+
+
+            SettingsView()
+                .tabItem {
+                    Label(
+                        "settings_title",
+                        systemImage: "gear"
                     )
                 }
         }
     }
 }
+
 
 #Preview {
     MainTabView()
