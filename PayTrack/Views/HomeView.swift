@@ -62,7 +62,7 @@ struct HomeView: View {
                     // MARK: - MONTH TOTAL
                     VStack {
 
-                        Text("Цього місяця")
+                        Text("this_month")
                             .font(.headline)
                             .foregroundStyle(.secondary)
 

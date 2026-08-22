@@ -64,10 +64,9 @@ struct SettingsView: View {
                 Section("theme") {
 
                     Picker("theme", selection: $theme) {
-
-                        Text("Система").tag("Система")
-                        Text("Світла").tag("Світла")
-                        Text("Темна").tag("Темна")
+                        Text("theme_system").tag("system")
+                        Text("theme_light").tag("light")
+                        Text("theme_dark").tag("dark")
                     }
                 }
             }

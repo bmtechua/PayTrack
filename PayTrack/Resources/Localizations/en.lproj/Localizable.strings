@@ -5,6 +5,10 @@
 //  Created by bmtech on 30.06.2026.
 //
 
+"theme_system" = "System";
+"theme_light" = "Light";
+"theme_dark" = "Dark";
+
 "home_title" = "Home";
 "analytics_title" = "Analytics";
 "settings_title" = "Settings";
@@ -15,6 +19,7 @@
 "today" = "Today";
 
 "expenses" = "Expenses";
+"all_expenses" = "All expenses";
 
 "budget" = "Budget";
 "monthly_limit" = "Monthly limit";
@@ -24,10 +29,8 @@
 "theme" = "Theme";
 
 "categories" = "Categories";
+"no_category" = "No category";
 
-"analytics_title" = "Analytics";
-"this_month" = "This month";
-"categories" = "Categories";
 "by_days" = "By days";
 "top_category" = "Top category";
 "no_data" = "No data";

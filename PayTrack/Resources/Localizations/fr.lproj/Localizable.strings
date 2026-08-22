@@ -5,16 +5,21 @@
 //  Created by bmtech on 30.06.2026.
 //
 
+"theme_system" = "Système";
+"theme_light" = "Clair";
+"theme_dark" = "Sombre";
+
 "home_title" = "Accueil";
 "analytics_title" = "Analytique";
 "settings_title" = "Réglages";
 
 "add_expense" = "Ajouter une dépense";
 
-"this_month" = "Ce mois";
+"this_month" = "Ce mois-ci";
 "today" = "Aujourd'hui";
 
 "expenses" = "Dépenses";
+"all_expenses" = "Toutes les dépenses";
 
 "budget" = "Budget";
 "monthly_limit" = "Limite mensuelle";
@@ -24,10 +29,8 @@
 "theme" = "Thème";
 
 "categories" = "Catégories";
+"no_category" = "Sans catégorie";
 
-"analytics_title" = "Analytique";
-"this_month" = "Ce mois-ci";
-"categories" = "Catégories";
-"by_days" = "Par jours";
+"by_days" = "Par jour";
 "top_category" = "Catégorie principale";
 "no_data" = "Pas de données";

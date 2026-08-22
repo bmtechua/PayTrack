@@ -5,6 +5,10 @@
 //  Created by bmtech on 30.06.2026.
 //
 
+"theme_system" = "Система";
+"theme_light" = "Світла";
+"theme_dark" = "Темна";
+
 "home_title" = "Головна";
 "analytics_title" = "Аналітика";
 "settings_title" = "Налаштування";
@@ -15,6 +19,7 @@
 "today" = "Сьогодні";
 
 "expenses" = "Витрат";
+"all_expenses" = "Всі витрати";
 
 "budget" = "Бюджет";
 "monthly_limit" = "Ліміт на місяць";
@@ -24,10 +29,8 @@
 "theme" = "Тема";
 
 "categories" = "Категорії";
+"no_category" = "Без категорії";
 
-"analytics_title" = "Аналітика";
-"this_month" = "Цього місяця";
-"categories" = "Категорії";
 "by_days" = "По днях";
 "top_category" = "Найбільша категорія";
 "no_data" = "Немає даних";

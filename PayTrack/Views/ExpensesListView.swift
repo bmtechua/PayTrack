@@ -49,7 +49,7 @@ struct ExpensesListView: View {
 
                                 Text(
                                     expense.category?.name
-                                    ?? "Без категорії"
+                                    ?? NSLocalizedString("no_category", comment: "")
                                 )
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -85,7 +85,7 @@ struct ExpensesListView: View {
                 )
             }
 
-            .navigationTitle("Всі витрати")
+            .navigationTitle("all_expenses")
         }
     }
 

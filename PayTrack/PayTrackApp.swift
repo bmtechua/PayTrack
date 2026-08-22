@@ -41,12 +41,13 @@ struct PayTrackApp: App {
     }
 
     private func selectedScheme() -> ColorScheme? {
-
         switch theme {
-
-        case "Світла": return .light
-        case "Темна": return .dark
-        default: return nil
+        case "light":
+            return .light
+        case "dark":
+            return .dark
+        default:
+            return nil
         }
     }
 }
