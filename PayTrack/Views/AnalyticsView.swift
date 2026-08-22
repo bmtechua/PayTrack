@@ -82,9 +82,9 @@ struct AnalyticsView: View {
                         Text("total_spent")
 
                         Text(
-                            String(
-                                format: "%.2f грн",
-                                monthTotal()
+                            formatAmount(
+                                monthTotal(),
+                                currency: currency
                             )
                         )
                         .font(.largeTitle)
@@ -108,11 +108,10 @@ struct AnalyticsView: View {
                     Text("categories")
                         .font(.headline)
 
-
+ 
+                    
                     let categories = categoryData()
-
-
-                    if !categories.isEmpty {
+                 if !categories.isEmpty {
 
 
                         Chart {
@@ -220,7 +219,7 @@ struct AnalyticsView: View {
 
 
                             Text(
-                                "\(top.name) — \(String(format:"%.2f", top.amount)) грн"
+                                "\(top.name) — \(formatAmount(top.amount, currency: currency))"
                             )
 
                         }
@@ -340,37 +339,28 @@ struct AnalyticsView: View {
 
 
     private func categoryData()
-    -> [(String,Double)] {
-
+    -> [(String, Double)] {
 
         let grouped =
         Dictionary(
-            grouping:
-                filteredExpenses()
+            grouping: filteredExpenses()
         ) {
 
-
-            $0.category?.name
-            ?? "Без категорії"
-
+            localizedCategory(
+                $0.category?.name,
+                language: language
+            )
         }
-
-
 
         return grouped.map {
 
-
             (
                 $0.key,
-
-                $0.value.reduce(0){
+                $0.value.reduce(0) {
                     $0 + $1.amount
                 }
-
             )
-
         }
-
     }
 
 
