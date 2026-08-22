@@ -14,14 +14,20 @@
 "settings_title" = "Réglages";
 
 "add_expense" = "Ajouter une dépense";
+"total_spent" = "Total dépensé";
 
 "this_month" = "Ce mois-ci";
 "today" = "Aujourd'hui";
 
 "expenses" = "Dépenses";
+"expense" = "Dépense";
 "all_expenses" = "Toutes les dépenses";
+"expense_name" = "Nom";
+"new_expense" = "Nouvelle dépense";
 
 "budget" = "Budget";
+"budget_exceeded" = "⚠️ Vous avez dépassé votre budget !";
+"monthly_budget" = "Budget mensuel";
 "monthly_limit" = "Limite mensuelle";
 
 "currency" = "Devise";
@@ -30,7 +36,21 @@
 
 "categories" = "Catégories";
 "no_category" = "Sans catégorie";
+"new_category" = "Nouvelle catégorie";
+"create_category_first" = "Créez d'abord une catégorie";
 
 "by_days" = "Par jour";
 "top_category" = "Catégorie principale";
 "no_data" = "Pas de données";
+
+"amount" = "Montant";
+"category" = "Catégorie";
+"day" = "Jour";
+"date" = "Date";
+
+"save" = "Enregistrer";
+
+"food" = "Nourriture";
+"house" = "Maison";
+"relax" = "Loisirs";
+"transport" = "Transport";

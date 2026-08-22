@@ -14,14 +14,20 @@
 "settings_title" = "Settings";
 
 "add_expense" = "Add expense";
+"total_spent" = "Total spent";
 
 "this_month" = "This month";
 "today" = "Today";
 
 "expenses" = "Expenses";
+"expense" = "Expense";
 "all_expenses" = "All expenses";
+"expense_name" = "Name";
+"new_expense" = "New expense";
 
 "budget" = "Budget";
+"budget_exceeded" = "⚠️ You exceeded your budget!";
+"monthly_budget" = "Monthly budget";
 "monthly_limit" = "Monthly limit";
 
 "currency" = "Currency";
@@ -30,7 +36,21 @@
 
 "categories" = "Categories";
 "no_category" = "No category";
+"new_category" = "New category";
+"create_category_first" = "Create a category first";
 
 "by_days" = "By days";
 "top_category" = "Top category";
 "no_data" = "No data";
+
+"amount" = "Amount";
+"category" = "Category";
+"day" = "Day";
+"date" = "Date";
+
+"save" = "Save";
+
+"food" = "Food";
+"house" = "House";
+"relax" = "Relax";
+"transport" = "Transport";

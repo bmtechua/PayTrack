@@ -16,7 +16,7 @@ struct StatCard: View {
 
         VStack(spacing: 6) {
 
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

@@ -14,14 +14,20 @@
 "settings_title" = "Налаштування";
 
 "add_expense" = "Додати витрату";
+"total_spent" = "Всього витрачено";
 
 "this_month" = "Цього місяця";
 "today" = "Сьогодні";
 
 "expenses" = "Витрат";
+"expense" = "Витрата";
 "all_expenses" = "Всі витрати";
+"expense_name" = "Назва";
+"new_expense" = "Нова витрата";
 
 "budget" = "Бюджет";
+"budget_exceeded" = "⚠️ Ви перевищили бюджет!";
+"monthly_budget" = "Бюджет місяця";
 "monthly_limit" = "Ліміт на місяць";
 
 "currency" = "Валюта";
@@ -30,7 +36,21 @@
 
 "categories" = "Категорії";
 "no_category" = "Без категорії";
+"new_category" = "Нова категорія";
+"create_category_first" = "Створіть категорію спочатку";
 
 "by_days" = "По днях";
 "top_category" = "Найбільша категорія";
 "no_data" = "Немає даних";
+
+"amount" = "Сума";
+"category" = "Категорія";
+"day" = "День";
+"date" = "Дата";
+
+"save" = "Зберегти";
+
+"food" = "Їжа";
+"house" = "Дім";
+"relax" = "Відпочинок";
+"transport" = "Транспорт";

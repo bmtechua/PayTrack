@@ -39,16 +39,16 @@ struct AddExpenseView: View {
 
             Form {
 
-                Section("Витрата") {
+                Section("expense") {
 
                     TextField(
-                        "Назва",
+                        "expense_name",
                         text: $title
                     )
 
 
                     TextField(
-                        "Сума",
+                        "amount",
                         text: $amount
                     )
                     .keyboardType(.decimalPad)
@@ -56,7 +56,7 @@ struct AddExpenseView: View {
 
 
                     DatePicker(
-                        "Дата",
+                        "date",
                         selection: $date,
                         displayedComponents: .date
                     )
@@ -64,28 +64,31 @@ struct AddExpenseView: View {
 
 
 
-                Section("Категорія") {
+                Section("category") {
 
                     if categories.isEmpty {
 
-                        Text("Створіть категорію спочатку")
+                        Text("create_category_first")
                             .foregroundStyle(.secondary)
 
                     } else {
 
                         Picker(
-                            "Категорія",
+                            "category",
                             selection: $selectedCategory
                         ) {
 
-                            Text("Без категорії")
+                            Text("no_category")
                                 .tag(Category?.none)
 
 
                             ForEach(categories) { category in
 
                                 Text(
-                                    category.name ?? ""
+                                    NSLocalizedString(
+                                        category.name ?? "",
+                                        comment: ""
+                                    )
                                 )
                                 .tag(
                                     Category?.some(category)
@@ -103,12 +106,12 @@ struct AddExpenseView: View {
 
                 } label: {
 
-                    Text("Зберегти")
+                    Text("save")
                         .frame(maxWidth: .infinity)
                 }
             }
 
-            .navigationTitle("Нова витрата")
+            .navigationTitle("new_expense")
 
             .onAppear {
 

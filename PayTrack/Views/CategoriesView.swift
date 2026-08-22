@@ -32,7 +32,7 @@ struct CategoriesView: View {
                 HStack {
 
                     TextField(
-                        "Нова категорія",
+                        "new_category",
                         text: $newCategory
                     )
                     .textFieldStyle(.roundedBorder)
@@ -57,8 +57,12 @@ struct CategoriesView: View {
                         HStack {
 
                             Text(category.icon ?? "📌")
-
-                            Text(category.name ?? "")
+                            Text(
+                                NSLocalizedString(
+                                    category.name ?? "",
+                                    comment: ""
+                                )
+                            )
                         }
                     }
                     .onDelete(perform: deleteCategory)

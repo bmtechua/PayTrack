@@ -10,6 +10,9 @@ import CoreData
 
 struct HomeView: View {
 
+    @AppStorage("language")
+    private var language = "uk"
+    
     @AppStorage("monthlyBudget")
     private var monthlyBudget: Double = 5000
     
@@ -81,7 +84,7 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 10) {
 
                         HStack {
-                            Text("Бюджет місяця")
+                            Text("monthly_budget")
                                 .font(.headline)
 
                             Spacer()
@@ -108,7 +111,7 @@ struct HomeView: View {
                     )
 
                     if budgetProgress() > 1 {
-                        Text("⚠️ Ви перевищили бюджет!")
+                        Text("budget_exceeded")
                             .foregroundStyle(.red)
                             .font(.caption)
                     }
@@ -117,12 +120,12 @@ struct HomeView: View {
                     HStack {
 
                         StatCard(
-                            title: "Сьогодні",
+                            title: "today",
                             value: String(format: "%.2f грн", todayTotal())
                         )
 
                         StatCard(
-                            title: "Витрат",
+                            title: "expenses",
                             value: "\(filteredExpenses().count)"
                         )
                     }
@@ -131,7 +134,7 @@ struct HomeView: View {
                     NavigationLink {
                         AddExpenseView()
                     } label: {
-                        Label("Додати витрату", systemImage: "plus")
+                        Label("add_expense", systemImage: "plus")
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(.blue)
@@ -156,7 +159,7 @@ struct HomeView: View {
 
     private func monthTitle(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "uk_UA")
+        formatter.locale = Locale(identifier: language)
         formatter.dateFormat = "LLLL yyyy"
         return formatter.string(from: date)
     }

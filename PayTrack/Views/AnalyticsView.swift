@@ -12,6 +12,9 @@ import Charts
 
 struct AnalyticsView: View {
 
+    @AppStorage("language")
+    private var language = "uk"
+    
     @FetchRequest(
         sortDescriptors: [
             NSSortDescriptor(
@@ -73,7 +76,7 @@ struct AnalyticsView: View {
 
                     VStack {
 
-                        Text("Всього витрачено")
+                        Text("total_spent")
 
                         Text(
                             String(
@@ -99,7 +102,7 @@ struct AnalyticsView: View {
                     // MARK: - CATEGORY CHART
 
 
-                    Text("Категорії")
+                    Text("categories")
                         .font(.headline)
 
 
@@ -120,18 +123,12 @@ struct AnalyticsView: View {
                                 SectorMark(
 
                                     angle:
-                                        .value(
-                                            "Сума",
-                                            item.1
-                                        )
+                                            .value("amount", item.1)
                                 )
 
                                 .foregroundStyle(
                                     by:
-                                        .value(
-                                            "Категорія",
-                                            item.0
-                                        )
+                                            .value("category", item.0)
                                 )
 
                             }
@@ -143,7 +140,7 @@ struct AnalyticsView: View {
 
                     } else {
 
-                        Text("Немає даних")
+                        Text("no_data")
                             .foregroundStyle(.secondary)
                     }
 
@@ -154,7 +151,7 @@ struct AnalyticsView: View {
                     // MARK: - DAILY CHART
 
 
-                    Text("По днях")
+                    Text("by_days")
                         .font(.headline)
 
 
@@ -178,35 +175,22 @@ struct AnalyticsView: View {
                                 LineMark(
 
                                     x:
-                                        .value(
-                                            "День",
-                                            item.0
-                                        ),
+                                            .value("day", item.0),
 
 
                                     y:
-                                        .value(
-                                            "Сума",
-                                            item.1
-                                        )
+                                            .value("amount", item.1)
                                 )
 
 
                                 PointMark(
 
                                     x:
-                                        .value(
-                                            "День",
-                                            item.0
-                                        ),
+                                            .value("day", item.0),
 
 
                                     y:
-                                        .value(
-                                            "Сума",
-                                            item.1
-                                        )
-                                )
+                                            .value("amount", item.1)                                )
 
                             }
                         }
@@ -228,7 +212,7 @@ struct AnalyticsView: View {
                         VStack(alignment:.leading) {
 
 
-                            Text("Найбільша категорія")
+                            Text("top_category")
                                 .font(.headline)
 
 
@@ -286,24 +270,12 @@ struct AnalyticsView: View {
 
 
 
-    private func monthTitle(
-        _ date: Date
-    ) -> String {
-
-
+    private func monthTitle(_ date: Date) -> String {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: language)
+        formatter.dateFormat = "LLLL yyyy"
 
-        formatter.locale =
-            Locale(identifier:"uk_UA")
-
-        formatter.dateFormat =
-            "LLLL yyyy"
-
-
-        return formatter.string(
-            from: date
-        )
-
+        return formatter.string(from: date)
     }
 
 
