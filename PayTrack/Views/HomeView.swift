@@ -5,6 +5,8 @@
 //  Created by bmtech on 29.06.2026.
 //
 
+
+
 import SwiftUI
 import CoreData
 
@@ -12,6 +14,9 @@ struct HomeView: View {
 
     @AppStorage("language")
     private var language = "uk"
+    
+    @AppStorage("currency")
+    private var currency = "UAH"
     
     @AppStorage("monthlyBudget")
     private var monthlyBudget: Double = 5000
@@ -69,7 +74,7 @@ struct HomeView: View {
                             .font(.headline)
                             .foregroundStyle(.secondary)
 
-                        Text(String(format: "%.2f грн", monthTotal()))
+                        Text(formatAmount(monthTotal(), currency: currency))
                             .font(.largeTitle)
                             .bold()
                     }
@@ -89,7 +94,7 @@ struct HomeView: View {
 
                             Spacer()
 
-                            Text(String(format: "%.0f грн", monthlyBudget))
+                            Text(formatAmount(monthlyBudget, currency: currency))
                                 .foregroundStyle(.secondary)
                         }
 
@@ -97,7 +102,7 @@ struct HomeView: View {
                             .tint(budgetProgress() > 1 ? .red : .blue)
 
                         HStack {
-                            Text(String(format: "%.0f грн", monthTotal()))
+                            Text(formatAmount(monthTotal(), currency: currency))
                             Spacer()
                             Text(String(format: "%.0f%%", budgetProgress() * 100))
                         }
@@ -121,7 +126,7 @@ struct HomeView: View {
 
                         StatCard(
                             title: "today",
-                            value: String(format: "%.2f грн", todayTotal())
+                            value: formatAmount(todayTotal(), currency: currency)
                         )
 
                         StatCard(

@@ -15,6 +15,9 @@ struct AnalyticsView: View {
     @AppStorage("language")
     private var language = "uk"
     
+    @AppStorage("currency")
+    private var currency = "UAH"
+    
     @FetchRequest(
         sortDescriptors: [
             NSSortDescriptor(
