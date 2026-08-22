@@ -54,3 +54,7 @@
 "House" = "Дім";
 "Relax" = "Відпочинок";
 "Transport" = "Транспорт";
+
+"currency_uah" = "₴ Гривня";
+"currency_eur" = "€ Євро";
+"currency_usd" = "$ Долар";

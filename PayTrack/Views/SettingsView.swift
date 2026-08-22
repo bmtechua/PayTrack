@@ -43,9 +43,9 @@ struct SettingsView: View {
 
                     Picker("currency", selection: $currency) {
 
-                        Text("₴ Гривня").tag("UAH")
-                        Text("€ Євро").tag("EUR")
-                        Text("$ Долар").tag("USD")
+                        Text("currency_uah").tag("UAH")
+                        Text("currency_eur").tag("EUR")
+                        Text("currency_usd").tag("USD")
                     }
                 }
 

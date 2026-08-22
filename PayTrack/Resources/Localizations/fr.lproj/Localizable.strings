@@ -54,3 +54,7 @@
 "House" = "Maison";
 "Relax" = "Loisirs";
 "Transport" = "Transport";
+
+"currency_uah" = "₴ Hryvnia ukrainienne";
+"currency_eur" = "€ Euro";
+"currency_usd" = "$ Dollar américain";

@@ -41,31 +41,7 @@ struct HomeView: View {
 
                 VStack(spacing: 20) {
 
-                    // MARK: - MONTH SWITCHER
-                    HStack {
 
-                        Button {
-                            monthOffset -= 1
-                        } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.title2)
-                        }
-
-                        Spacer()
-
-                        Text(monthTitle(selectedMonth))
-                            .font(.headline)
-
-                        Spacer()
-
-                        Button {
-                            monthOffset += 1
-                        } label: {
-                            Image(systemName: "chevron.right")
-                                .font(.title2)
-                        }
-                    }
-                    .padding(.horizontal)
 
                     // MARK: - MONTH TOTAL
                     VStack {
@@ -153,21 +129,9 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - MONTH
-    private var selectedMonth: Date {
-        Calendar.current.date(
-            byAdding: .month,
-            value: monthOffset,
-            to: Date()
-        ) ?? Date()
-    }
+   
 
-    private func monthTitle(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: language)
-        formatter.dateFormat = "LLLL yyyy"
-        return formatter.string(from: date)
-    }
+
 
     // MARK: - FILTER
     private func filteredExpenses() -> [Expense] {
@@ -180,7 +144,7 @@ struct HomeView: View {
 
             return calendar.isDate(
                 date,
-                equalTo: selectedMonth,
+                equalTo: Date(),
                 toGranularity: .month
             )
         }
