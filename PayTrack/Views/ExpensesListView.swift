@@ -95,19 +95,24 @@ struct ExpensesListView: View {
 
         withAnimation {
 
-            offsets.map {
-                expenses[$0]
-            }
-            .forEach(context.delete)
+            for index in offsets {
 
+                let expense = expenses[index]
+
+                AppLogger.shared.info(
+                    "Expense deleted: \(expense.title ?? "Unknown"), amount: \(expense.amount)"
+                )
+
+                context.delete(expense)
+            }
 
             do {
-
                 try context.save()
 
             } catch {
-
-                print(error.localizedDescription)
+                AppLogger.shared.error(
+                    "Failed to delete expense: \(error.localizedDescription)"
+                )
             }
         }
     }

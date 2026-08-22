@@ -103,6 +103,10 @@ struct CategoriesView: View {
         category.id = UUID()
         category.name = newCategory
         category.icon = "📌"
+        
+        AppLogger.shared.info(
+            "Category added: \(newCategory)"
+        )
 
 
         save()
@@ -121,6 +125,10 @@ struct CategoriesView: View {
             guard !category.isDefault else {
                 continue
             }
+            
+            AppLogger.shared.info(
+                "Category deleted: \(category.name ?? "unknown")"
+            )
 
             context.delete(category)
         }
@@ -138,7 +146,9 @@ struct CategoriesView: View {
 
         } catch {
 
-            print(error.localizedDescription)
+            AppLogger.shared.error(
+                    "Failed to save category: \(error.localizedDescription)"
+                )
         }
     }
     

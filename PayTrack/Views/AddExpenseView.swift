@@ -152,14 +152,17 @@ struct AddExpenseView: View {
         do {
 
             try context.save()
+            
+            AppLogger.shared.info(
+                    "Expense saved: \(title), amount: \(value)"
+                )
 
             dismiss()
 
         } catch {
 
-            print(
-                "Save error:",
-                error.localizedDescription
+            AppLogger.shared.error(
+                "Failed to save expense: \(error.localizedDescription)"
             )
         }
     }
