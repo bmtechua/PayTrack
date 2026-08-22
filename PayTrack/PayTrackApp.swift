@@ -18,6 +18,10 @@ struct PayTrackApp: App {
 
     @AppStorage("language")
     private var language = "uk"
+    
+    init() {
+        AppLogger.shared.info("PayTrack started")
+    }
 
 
     var body: some Scene {

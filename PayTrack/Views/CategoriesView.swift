@@ -48,22 +48,38 @@ struct CategoriesView: View {
                     }
                 }
                 .padding()
-                
+            //
+                Button("TEST CATEGORY ATTRIBUTES") {
+                    for category in categories {
 
+                        print("========== CATEGORY ==========")
+
+                        let entity = category.entity
+
+                        for attribute in entity.attributesByName.keys {
+
+                            let value = category.value(
+                                forKey: attribute
+                            )
+
+                            print("\(attribute):", value as Any)
+                        }
+                    }
+                }
+            //
                 List {
 
                     ForEach(categories) { category in
-
                         HStack {
-
                             Text(category.icon ?? "📌")
+
                             Text(
                                 LocalizedStringKey(
                                     category.name ?? ""
                                 )
                             )
-
                         }
+                        .deleteDisabled(category.isDefault)
                     }
                     .onDelete(perform: deleteCategory)
                 }
@@ -98,8 +114,16 @@ struct CategoriesView: View {
 
     private func deleteCategory(offsets: IndexSet) {
 
-        offsets.map { categories[$0] }
-            .forEach(context.delete)
+        for index in offsets {
+
+            let category = categories[index]
+
+            guard !category.isDefault else {
+                continue
+            }
+
+            context.delete(category)
+        }
 
         save()
     }
@@ -117,6 +141,7 @@ struct CategoriesView: View {
             print(error.localizedDescription)
         }
     }
+    
 }
 
 

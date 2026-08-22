@@ -41,5 +41,32 @@ struct PersistenceController {
             }
         })
         container.viewContext.automaticallyMergesChangesFromParent = true
+        markDefaultCategories()
+    }
+    
+    private func markDefaultCategories() {
+
+        let context = container.viewContext
+
+        let request: NSFetchRequest<Category> = Category.fetchRequest()
+
+        do {
+            let categories = try context.fetch(request)
+
+            for category in categories {
+                switch category.name {
+                case "Food", "House", "Relax", "Transport":
+                    category.isDefault = true
+
+                default:
+                    break
+                }
+            }
+
+            try context.save()
+
+        } catch {
+            print("Default categories error:", error.localizedDescription)
+        }
     }
 }
