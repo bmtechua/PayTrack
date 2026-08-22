@@ -50,7 +50,7 @@
 
 "save" = "Enregistrer";
 
-"food" = "Nourriture";
-"house" = "Maison";
-"relax" = "Loisirs";
-"transport" = "Transport";
+"Food" = "Nourriture";
+"House" = "Maison";
+"Relax" = "Loisirs";
+"Transport" = "Transport";

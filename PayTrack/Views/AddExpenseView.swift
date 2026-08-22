@@ -85,9 +85,8 @@ struct AddExpenseView: View {
                             ForEach(categories) { category in
 
                                 Text(
-                                    NSLocalizedString(
-                                        category.name ?? "",
-                                        comment: ""
+                                    LocalizedStringKey(
+                                        category.name ?? ""
                                     )
                                 )
                                 .tag(

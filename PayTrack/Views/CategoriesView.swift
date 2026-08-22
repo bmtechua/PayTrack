@@ -48,7 +48,7 @@ struct CategoriesView: View {
                     }
                 }
                 .padding()
-
+                
 
                 List {
 
@@ -58,11 +58,11 @@ struct CategoriesView: View {
 
                             Text(category.icon ?? "📌")
                             Text(
-                                NSLocalizedString(
-                                    category.name ?? "",
-                                    comment: ""
+                                LocalizedStringKey(
+                                    category.name ?? ""
                                 )
                             )
+
                         }
                     }
                     .onDelete(perform: deleteCategory)
