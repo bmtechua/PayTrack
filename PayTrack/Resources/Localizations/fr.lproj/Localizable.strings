@@ -58,3 +58,5 @@
 "currency_uah" = "₴ Hryvnia ukrainienne";
 "currency_eur" = "€ Euro";
 "currency_usd" = "$ Dollar américain";
+
+"app_log" = "Journal de l’application";

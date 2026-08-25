@@ -69,6 +69,16 @@ struct SettingsView: View {
                         Text("theme_dark").tag("dark")
                     }
                 }
+                
+                // MARK: - Log
+                Section("app_log") {
+
+                    NavigationLink {
+                        LogView()
+                    } label: {
+                        Text("app_log")
+                    }
+                }
             }
             .navigationTitle("settings_title")
         }
