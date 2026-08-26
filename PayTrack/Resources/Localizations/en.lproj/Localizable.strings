@@ -69,3 +69,4 @@
 "mail_unavailable_title" = "Mail unavailable";
 "mail_unavailable_message" = "Mail is not configured on this device. Use the Share button instead.";
 "ok" = "OK";
+"done" = "Done";

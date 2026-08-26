@@ -20,6 +20,9 @@ struct SettingsView: View {
     @AppStorage("theme")
     private var theme: String = "Система"
 
+    @State
+    private var budgetBeforeEditing: Double = 0
+
 
     var body: some View {
 
@@ -28,58 +31,106 @@ struct SettingsView: View {
             Form {
 
                 // MARK: - Budget
+
                 Section("budget") {
 
-                    TextField(
-                        "budget_limit",
+                    BudgetTextField(
                         value: $monthlyBudget,
-                        format: .number
+                        onEditingBegan: {
+                            budgetBeforeEditing = monthlyBudget
+                        },
+                        onDone: {
+
+                            if budgetBeforeEditing != monthlyBudget {
+
+                                AppLogger.shared.info(
+                                    "Budget changed: \(budgetBeforeEditing) → \(monthlyBudget)"
+                                )
+                            }
+                        }
                     )
-                    .keyboardType(.decimalPad)
+                    .frame(height: 36)
                 }
+
 
                 // MARK: - Currency
+
                 Section("currency") {
 
-                    Picker("currency", selection: $currency) {
+                    Picker(
+                        "currency",
+                        selection: $currency
+                    ) {
 
-                        Text("currency_uah").tag("UAH")
-                        Text("currency_eur").tag("EUR")
-                        Text("currency_usd").tag("USD")
+                        Text("currency_uah")
+                            .tag("UAH")
+
+                        Text("currency_eur")
+                            .tag("EUR")
+
+                        Text("currency_usd")
+                            .tag("USD")
                     }
                 }
+
 
                 // MARK: - Language
+
                 Section("language") {
 
-                    Picker("language", selection: $language) {
+                    Picker(
+                        "language",
+                        selection: $language
+                    ) {
 
-                        Text("Українська").tag("uk")
-                        Text("English").tag("en")
-                        Text("Français").tag("fr")
+                        Text("Українська")
+                            .tag("uk")
+
+                        Text("English")
+                            .tag("en")
+
+                        Text("Français")
+                            .tag("fr")
                     }
                 }
+
 
                 // MARK: - Theme
+
                 Section("theme") {
 
-                    Picker("theme", selection: $theme) {
-                        Text("theme_system").tag("system")
-                        Text("theme_light").tag("light")
-                        Text("theme_dark").tag("dark")
+                    Picker(
+                        "theme",
+                        selection: $theme
+                    ) {
+
+                        Text("theme_system")
+                            .tag("system")
+
+                        Text("theme_light")
+                            .tag("light")
+
+                        Text("theme_dark")
+                            .tag("dark")
                     }
                 }
-                
+
+
                 // MARK: - Log
+
                 Section("app_log") {
 
                     NavigationLink {
+
                         LogView()
+
                     } label: {
+
                         Text("app_log")
                     }
                 }
             }
+
             .navigationTitle("settings_title")
         }
     }

@@ -69,3 +69,4 @@
 "mail_unavailable_title" = "Mail недоступний";
 "mail_unavailable_message" = "На цьому пристрої не налаштовано Mail. Використайте кнопку «Поділитися».";
 "ok" = "OK";
+"done" = "Готово";

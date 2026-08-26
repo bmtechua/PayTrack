@@ -8,65 +8,95 @@
 import CoreData
 
 struct PersistenceController {
+
     static let shared = PersistenceController()
 
     @MainActor
     static var preview: PersistenceController = {
         let result = PersistenceController(inMemory: true)
-        
         return result
     }()
 
     let container: NSPersistentContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentContainer(name: "PayTrack")
+
+        let container = NSPersistentContainer(name: "PayTrack")
+
         if inMemory {
-            container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
+            container.persistentStoreDescriptions.first!.url =
+                URL(fileURLWithPath: "/dev/null")
         }
-        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
+
+        self.container = container
+
+        container.loadPersistentStores { storeDescription, error in
+
             if let error = error as NSError? {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
 
-                /*
-                 Typical reasons for an error here include:
-                 * The parent directory does not exist, cannot be created, or disallows writing.
-                 * The persistent store is not accessible, due to permissions or data protection when the device is locked.
-                 * The device is out of space.
-                 * The store could not be migrated to the current model version.
-                 Check the error message to determine what the actual problem was.
-                 */
-                fatalError("Unresolved error \(error), \(error.userInfo)")
+                fatalError(
+                    "Unresolved error \(error), \(error.userInfo)"
+                )
             }
-        })
+
+            container.viewContext.perform {
+                PersistenceController.setupDefaultCategories(
+                    context: container.viewContext
+                )
+            }
+        }
+
         container.viewContext.automaticallyMergesChangesFromParent = true
-        markDefaultCategories()
     }
-    
-    private func markDefaultCategories() {
 
-        let context = container.viewContext
+    private static func setupDefaultCategories(
+        context: NSManagedObjectContext
+    ) {
 
-        let request: NSFetchRequest<Category> = Category.fetchRequest()
+        let request: NSFetchRequest<Category> =
+            Category.fetchRequest()
 
         do {
+
             let categories = try context.fetch(request)
 
-            for category in categories {
-                switch category.name {
-                case "Food", "House", "Relax", "Transport":
+            let defaultNames = [
+                "Food",
+                "House",
+                "Relax",
+                "Transport"
+            ]
+
+            for name in defaultNames {
+
+                if let category = categories.first(
+                    where: { $0.name == name }
+                ) {
+
                     category.isDefault = true
 
-                default:
-                    break
+                } else {
+
+                    let category = Category(context: context)
+
+                    category.id = UUID()
+                    category.name = name
+                    category.icon = "📌"
+                    category.isDefault = true
                 }
             }
 
             try context.save()
 
+            AppLogger.shared.info(
+                "Default categories checked successfully"
+            )
+
         } catch {
-            print("Default categories error:", error.localizedDescription)
+
+            AppLogger.shared.error(
+                "Default categories setup failed: \(error.localizedDescription)"
+            )
         }
     }
 }

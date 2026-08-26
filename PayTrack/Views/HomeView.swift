@@ -74,8 +74,10 @@ struct HomeView: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        ProgressView(value: budgetProgress())
-                            .tint(budgetProgress() > 1 ? .red : .blue)
+                        ProgressView(
+                            value: min(budgetProgress(), 1)
+                        )
+                        .tint(budgetProgress() > 1 ? .red : .blue)
 
                         HStack {
                             Text(formatAmount(monthTotal(), currency: currency))

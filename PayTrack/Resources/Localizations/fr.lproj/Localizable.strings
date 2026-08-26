@@ -69,3 +69,4 @@
 "mail_unavailable_title" = "Mail indisponible";
 "mail_unavailable_message" = "Mail n’est pas configuré sur cet appareil. Utilisez plutôt le bouton Partager.";
 "ok" = "OK";
+"done" = "Terminé";
