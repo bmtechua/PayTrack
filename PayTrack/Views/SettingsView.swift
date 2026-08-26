@@ -30,6 +30,15 @@ struct SettingsView: View {
 
             Form {
 
+                // MARK: - Account
+                Section("account") {
+                    NavigationLink {
+                        AccountView()
+                    } label: {
+                        Text("account")
+                    }
+                }
+                
                 // MARK: - Budget
 
                 Section("budget") {

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreData
+import Auth
 
 @main
 struct PayTrackApp: App {
