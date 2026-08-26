@@ -146,6 +146,8 @@ struct AddExpenseView: View {
         expense.date = date
 
         expense.category = selectedCategory
+        
+        expense.source = ExpenseSource.manual.rawValue
 
 
 
