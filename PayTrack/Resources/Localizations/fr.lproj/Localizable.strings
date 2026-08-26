@@ -60,3 +60,12 @@
 "currency_usd" = "$ Dollar américain";
 
 "app_log" = "Journal de l’application";
+"log_title" = "Journal de l’application";
+"log_empty" = "Le journal est vide";
+"log_share_subject" = "PayTrack — Rapport de problème";
+"log_mail_greeting" = "Bonjour.";
+"log_mail_description" = "Description du problème :";
+"log_mail_thanks" = "Merci.";
+"mail_unavailable_title" = "Mail indisponible";
+"mail_unavailable_message" = "Mail n’est pas configuré sur cet appareil. Utilisez plutôt le bouton Partager.";
+"ok" = "OK";

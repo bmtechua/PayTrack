@@ -60,3 +60,12 @@
 "currency_usd" = "$ Долар";
 
 "app_log" = "Лог програми";
+"log_title" = "Лог програми";
+"log_empty" = "Лог порожній";
+"log_share_subject" = "PayTrack — звіт про проблему";
+"log_mail_greeting" = "Вітаю.";
+"log_mail_description" = "Опис проблеми:";
+"log_mail_thanks" = "Дякую.";
+"mail_unavailable_title" = "Mail недоступний";
+"mail_unavailable_message" = "На цьому пристрої не налаштовано Mail. Використайте кнопку «Поділитися».";
+"ok" = "OK";

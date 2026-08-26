@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import MessageUI
 
 struct LogView: View {
 
@@ -14,6 +15,8 @@ struct LogView: View {
 
     @State private var logText = ""
     @State private var showMailComposer = false
+    @State private var showMailUnavailable = false
+    @State private var showShareSheet = false
 
     var body: some View {
 
@@ -23,7 +26,7 @@ struct LogView: View {
 
                 Text(
                     logText.isEmpty
-                    ? "Лог порожній"
+                    ? "log_empty"
                     : logText
                 )
                 .frame(
@@ -37,7 +40,7 @@ struct LogView: View {
                 .textSelection(.enabled)
                 .padding()
             }
-            .navigationTitle("Лог програми")
+            .navigationTitle("log_title")
             .toolbar {
 
                 ToolbarItemGroup(
@@ -53,7 +56,13 @@ struct LogView: View {
                     .disabled(logText.isEmpty)
 
                     Button {
-                        showMailComposer = true
+
+                        if MFMailComposeViewController.canSendMail() {
+                            showMailComposer = true
+                        } else {
+                            showShareSheet = true
+                        }
+
                     } label: {
                         Image(systemName: "envelope")
                     }
@@ -64,20 +73,35 @@ struct LogView: View {
                 loadLog()
             }
             .sheet(isPresented: $showMailComposer) {
-
                 MailComposerView(
-                    recipient: "YOUR_EMAIL@example.com",
-                    subject: "PayTrack — звіт про проблему",
+                    recipient: DeveloperSupport.email,
+                    subject: "log_share_subject",
                     body: """
-                    Вітаю.
+                    log_mail_greeting.
 
-                    Опис проблеми:
+                    log_mail_description:
 
-                    
 
-                    Дякую.
+                    log_mail_thanks.
                     """,
                     attachmentURL: AppLogger.shared.fileURL
+                )
+            }
+            .sheet(isPresented: $showShareSheet) {
+                ShareSheet(
+                    item: AppLogger.shared.fileURL
+                )
+            }
+            
+            .alert(
+                "mail_unavailable_title",
+                isPresented: $showMailUnavailable
+            ) {
+                Button("OK", role: .cancel) {
+                }
+            } message: {
+                Text(
+                    "mail_unavailable_message"
                 )
             }
         }

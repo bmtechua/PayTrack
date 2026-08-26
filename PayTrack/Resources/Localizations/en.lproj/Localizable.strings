@@ -60,3 +60,12 @@
 "currency_usd" = "$ US Dollar";
 
 "app_log" = "App log";
+"log_title" = "App Log";
+"log_empty" = "Log is empty";
+"log_share_subject" = "PayTrack — Problem Report";
+"log_mail_greeting" = "Hello.";
+"log_mail_description" = "Problem description:";
+"log_mail_thanks" = "Thank you.";
+"mail_unavailable_title" = "Mail unavailable";
+"mail_unavailable_message" = "Mail is not configured on this device. Use the Share button instead.";
+"ok" = "OK";
