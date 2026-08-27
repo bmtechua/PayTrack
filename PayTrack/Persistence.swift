@@ -64,7 +64,8 @@ struct PersistenceController {
                 "Food",
                 "House",
                 "Relax",
-                "Transport"
+                "Transport",
+                "Other"
             ]
 
             for name in defaultNames {

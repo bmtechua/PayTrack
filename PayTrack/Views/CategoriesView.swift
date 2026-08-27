@@ -48,25 +48,6 @@ struct CategoriesView: View {
                     }
                 }
                 .padding()
-            //
-                Button("TEST CATEGORY ATTRIBUTES") {
-                    for category in categories {
-
-                        print("========== CATEGORY ==========")
-
-                        let entity = category.entity
-
-                        for attribute in entity.attributesByName.keys {
-
-                            let value = category.value(
-                                forKey: attribute
-                            )
-
-                            print("\(attribute):", value as Any)
-                        }
-                    }
-                }
-            //
                 List {
 
                     ForEach(categories) { category in
@@ -103,6 +84,7 @@ struct CategoriesView: View {
         category.id = UUID()
         category.name = newCategory
         category.icon = "📌"
+        category.isDefault = false
         
         AppLogger.shared.info(
             "Category added: \(newCategory)"
