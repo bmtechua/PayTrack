@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreData
+import Supabase
 
 struct ExpensesListView: View {
 
@@ -88,9 +89,7 @@ struct ExpensesListView: View {
             .navigationTitle("all_expenses")
         }
     }
-
-
-
+    
     private func deleteExpense(offsets: IndexSet) {
 
         withAnimation {
@@ -99,9 +98,38 @@ struct ExpensesListView: View {
 
                 let expense = expenses[index]
 
+                guard let expenseID = expense.id else {
+                    AppLogger.shared.error(
+                        "Cannot delete expense: missing ID"
+                    )
+                    continue
+                }
+
+                let expenseTitle = expense.title ?? "Unknown"
+
                 AppLogger.shared.info(
-                    "Expense deleted: \(expense.title ?? "Unknown"), amount: \(expense.amount)"
+                    "Expense deleted: \(expenseTitle), amount: \(expense.amount)"
                 )
+
+                Task {
+                    do {
+                        _ = try await SupabaseManager.shared.client.auth.session
+
+                        AppLogger.shared.info(
+                            "Auto delete sync started"
+                        )
+
+                        await SyncService.shared.deleteExpense(
+                            id: expenseID,
+                            title: expenseTitle
+                        )
+
+                    } catch {
+                        AppLogger.shared.info(
+                            "Auto delete sync skipped: no authenticated user"
+                        )
+                    }
+                }
 
                 context.delete(expense)
             }

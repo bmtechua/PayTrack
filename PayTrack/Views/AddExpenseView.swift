@@ -165,7 +165,7 @@ struct AddExpenseView: View {
 
                     AppLogger.shared.info("Auto sync started")
 
-                    await SyncService.shared.syncAll()
+                    await SyncService.shared.syncOneExpense(expense)
 
                 } catch {
                     AppLogger.shared.info(

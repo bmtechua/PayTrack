@@ -50,32 +50,31 @@ final class SyncService {
         }
     }
     
-    func syncOneExpense() async {
+    func syncOneExpense(_ expense: Expense) async {
 
         do {
             let user = try await client.auth.session.user
 
-            let request: NSFetchRequest<Expense> = Expense.fetchRequest()
-            request.sortDescriptors = [
-                NSSortDescriptor(key: "date", ascending: false)
-            ]
-            request.fetchLimit = 1
-
-            let expenses = try context.fetch(request)
-
-            guard let expense = expenses.first else {
-                AppLogger.shared.info("No local expenses to sync")
+            guard let expenseID = expense.id else {
+                AppLogger.shared.error("Expense has no ID")
                 return
             }
 
+            let categoryID = expense.category?.id?.uuidString
+
             let data: [String: AnyJSON] = [
-                "id": .string(expense.id?.uuidString ?? UUID().uuidString),
+                "id": .string(expenseID.uuidString),
                 "user_id": .string(user.id.uuidString),
                 "title": .string(expense.title ?? ""),
                 "amount": .double(expense.amount),
                 "date": .string(
-                    ISO8601DateFormatter().string(from: expense.date ?? Date())
+                    ISO8601DateFormatter().string(
+                        from: expense.date ?? Date()
+                    )
                 ),
+                "category_id": categoryID.map {
+                    .string($0)
+                } ?? .null,
                 "merchant_name": expense.merchantName.map {
                     .string($0)
                 } ?? .null,
@@ -99,6 +98,29 @@ final class SyncService {
         } catch {
             AppLogger.shared.error(
                 "Expense sync failed: \(error.localizedDescription)"
+            )
+        }
+    }
+    
+    func deleteExpense(id: UUID, title: String) async {
+
+        do {
+            let user = try await client.auth.session.user
+
+            try await client
+                .from("expenses")
+                .delete()
+                .eq("id", value: id.uuidString)
+                .eq("user_id", value: user.id.uuidString)
+                .execute()
+
+            AppLogger.shared.info(
+                "Expense deleted from Supabase: \(title)"
+            )
+
+        } catch {
+            AppLogger.shared.error(
+                "Expense delete sync failed: \(error.localizedDescription)"
             )
         }
     }
