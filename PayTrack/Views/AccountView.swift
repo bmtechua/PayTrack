@@ -20,9 +20,12 @@ struct AccountView: View {
     @State private var errorMessage: String?
 
     var body: some View {
+
         Group {
+
             if let user = authService.user {
                 loggedInView(user: user)
+
             } else {
                 authenticationView
             }
@@ -30,6 +33,11 @@ struct AccountView: View {
         .navigationTitle("Акаунт")
         .task {
             await authService.loadCurrentUser()
+
+            if authService.user != nil {
+                await SyncService.shared.testSyncData()
+                //await SyncService.shared.syncOneCategory()
+            }
         }
     }
 
