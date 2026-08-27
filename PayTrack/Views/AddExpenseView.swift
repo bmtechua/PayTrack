@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreData
+import Supabase
 
 struct AddExpenseView: View {
 
@@ -152,12 +153,26 @@ struct AddExpenseView: View {
 
 
         do {
-
             try context.save()
-            
+
             AppLogger.shared.info(
-                    "Expense saved: \(title), amount: \(value)"
-                )
+                "Expense saved: \(title), amount: \(value)"
+            )
+
+            Task {
+                do {
+                    _ = try await SupabaseManager.shared.client.auth.session
+
+                    AppLogger.shared.info("Auto sync started")
+
+                    await SyncService.shared.syncAll()
+
+                } catch {
+                    AppLogger.shared.info(
+                        "Auto sync skipped: no authenticated user"
+                    )
+                }
+            }
 
             dismiss()
 
