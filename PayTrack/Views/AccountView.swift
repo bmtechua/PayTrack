@@ -35,8 +35,6 @@ struct AccountView: View {
             await authService.loadCurrentUser()
 
             if authService.user != nil {
-                await SyncService.shared.testSyncData()
-                //await SyncService.shared.syncOneCategory()
             }
         }
     }

@@ -23,6 +23,7 @@ struct ExpensesListView: View {
         animation: .default
     )
     private var expenses: FetchedResults<Expense>
+    @State private var selectedExpense: Expense?
 
 
     var body: some View {
@@ -33,57 +34,62 @@ struct ExpensesListView: View {
 
                 ForEach(expenses) { expense in
 
-                    HStack {
+                    Button {
+                        selectedExpense = expense
+                    } label: {
+                        HStack {
 
-                        VStack(alignment: .leading, spacing: 5) {
+                            VStack(alignment: .leading, spacing: 5) {
 
-                            Text(expense.title ?? "")
-                                .font(.headline)
+                                Text(expense.title ?? "")
+                                    .font(.headline)
 
+                                HStack {
 
-                            HStack {
+                                    Text(
+                                        expense.category?.icon ?? "📌"
+                                    )
+
+                                    Text(
+                                        expense.category?.name
+                                        ?? NSLocalizedString("no_category", comment: "")
+                                    )
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                }
 
                                 Text(
-                                    expense.category?.icon ?? "📌"
+                                    expense.date ?? Date(),
+                                    style: .date
                                 )
-
-
-                                Text(
-                                    expense.category?.name
-                                    ?? NSLocalizedString("no_category", comment: "")
-                                )
-                                .font(.subheadline)
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
-
                             }
 
+                            Spacer()
 
                             Text(
-                                expense.date ?? Date(),
-                                style: .date
+                                String(
+                                    format: "%.2f грн",
+                                    expense.amount
+                                )
                             )
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
+                            .fontWeight(.bold)
                         }
-
-
-                        Spacer()
-
-
-                        Text(
-                            String(
-                                format: "%.2f грн",
-                                expense.amount
-                            )
-                        )
-                        .fontWeight(.bold)
                     }
+                    .buttonStyle(.plain)
                 }
 
                 .onDelete(
                     perform: deleteExpense
                 )
+                .sheet(item: $selectedExpense) { expense in
+                    EditExpenseView(expense: expense)
+                        .environment(
+                            \.managedObjectContext,
+                            context
+                        )
+                }
             }
 
             .navigationTitle("all_expenses")

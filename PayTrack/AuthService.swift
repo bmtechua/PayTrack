@@ -24,6 +24,9 @@ final class AuthService: ObservableObject {
     func loadCurrentUser() async {
         do {
             user = try await client.auth.session.user
+            AppLogger.shared.info(
+                "Current user loaded: \(user?.email ?? "unknown")"
+            )
         } catch {
             user = nil
         }
@@ -36,6 +39,9 @@ final class AuthService: ObservableObject {
         )
 
         user = response.user
+        AppLogger.shared.info(
+            "Registration successful: \(user?.email ?? email)"
+        )
     }
 
     func signIn(email: String, password: String) async throws {
@@ -45,10 +51,14 @@ final class AuthService: ObservableObject {
         )
 
         user = session.user
+        AppLogger.shared.info(
+            "Login successful: \(user?.email ?? email)"
+        )
     }
 
     func signOut() async throws {
         try await client.auth.signOut()
         user = nil
+        AppLogger.shared.info("Logout successful")
     }
 }
