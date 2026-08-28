@@ -30,6 +30,7 @@ final class AuthService: ObservableObject {
                 await SyncService.shared.prepareForUser(userID)
 
                 await SyncService.shared.startCategoriesRealtime()
+                await SyncService.shared.startExpensesRealtime()
             }
 
         } catch {

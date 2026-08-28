@@ -18,6 +18,7 @@ final class SyncService {
     private let context = PersistenceController.shared.container.viewContext
     
     private var categoriesChannel: RealtimeChannelV2?
+    private var expensesChannel: RealtimeChannelV2?
 
     private init() {
     }
@@ -34,50 +35,60 @@ final class SyncService {
 
             let user = try await client.auth.session.user
 
+            AppLogger.shared.info(
+                "Realtime user ID: \(user.id.uuidString)"
+            )
+
             let channel = client.channel(
                 "categories-realtime-\(user.id.uuidString)"
             )
 
-            _ = channel.onPostgresChange(
-                InsertAction.self,
+            let changes = channel.postgresChange(
+                AnyAction.self,
                 schema: "public",
                 table: "categories"
-            ) { action in
-
-                Task { @MainActor in
-                    AppLogger.shared.info(
-                        "Realtime category INSERT: \(action.record)"
-                    )
-                }
-            }
-
-            _ = channel.onPostgresChange(
-                UpdateAction.self,
-                schema: "public",
-                table: "categories"
-            ) { action in
-
-                Task { @MainActor in
-                    AppLogger.shared.info(
-                        "Realtime category UPDATE: \(action.record)"
-                    )
-                }
-            }
-
-            _ = channel.onPostgresChange(
-                DeleteAction.self,
-                schema: "public",
-                table: "categories"
-            ) { action in
-
-                Task { @MainActor in
-                    AppLogger.shared.info(
-                        "Realtime category DELETE: \(action.oldRecord)"
-                    )
-                }
-            }
+            )
 
             categoriesChannel = channel
+
+            Task { @MainActor in
+
+                for await change in changes {
+
+                    switch change {
+
+                    case .insert(let action):
+
+                        self.applyRealtimeCategoryInsert(
+                            action.record
+                        )
+
+                        AppLogger.shared.info(
+                            "Realtime category INSERT received"
+                        )
+
+                    case .update(let action):
+
+                        self.applyRealtimeCategoryUpdate(
+                            action.record
+                        )
+
+                        AppLogger.shared.info(
+                            "Realtime category UPDATE received"
+                        )
+
+                    case .delete(let action):
+
+                        self.applyRealtimeCategoryDelete(
+                            action.oldRecord
+                        )
+
+                        AppLogger.shared.info(
+                            "Realtime category DELETE received"
+                        )
+                    }
+                }
+            }
 
             try await channel.subscribeWithError()
 
@@ -89,6 +100,204 @@ final class SyncService {
 
             AppLogger.shared.error(
                 "Categories Realtime failed: \(error.localizedDescription)"
+            )
+        }
+    }
+    
+    // MARK: - Apply Realtime category INSERT
+
+    private func applyRealtimeCategoryInsert(
+        _ record: [String: AnyJSON]
+    ) {
+
+        guard
+            case let .string(idString) = record["id"],
+            let categoryID = UUID(uuidString: idString)
+        else {
+            AppLogger.shared.error(
+                "Realtime category INSERT: invalid ID"
+            )
+            return
+        }
+
+        let request: NSFetchRequest<Category> =
+            Category.fetchRequest()
+
+        request.fetchLimit = 1
+        request.predicate = NSPredicate(
+            format: "id == %@",
+            categoryID as CVarArg
+        )
+
+        do {
+
+            if try context.fetch(request).first != nil {
+                AppLogger.shared.info(
+                    "Realtime category INSERT skipped: already exists"
+                )
+                return
+            }
+
+            let category = Category(context: context)
+
+            category.id = categoryID
+
+            if case let .string(value) = record["user_id"] {
+                category.userID = UUID(uuidString: value)
+            }
+
+            if case let .string(value) = record["name"] {
+                category.name = value
+            }
+
+            if case let .string(value) = record["icon"] {
+                category.icon = value
+            }
+
+            if case let .bool(value) = record["is_default"] {
+                category.is_default = value
+            }
+
+            try context.save()
+
+            AppLogger.shared.info(
+                "Realtime category INSERT applied: \(category.name ?? "No name")"
+            )
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Realtime category INSERT failed: \(error.localizedDescription)"
+            )
+        }
+    }
+    
+    // MARK: - Apply Realtime category UPDATE
+
+    private func applyRealtimeCategoryUpdate(
+        _ record: [String: AnyJSON]
+    ) {
+
+        guard
+            case let .string(idString) = record["id"],
+            let categoryID = UUID(uuidString: idString)
+        else {
+            AppLogger.shared.error(
+                "Realtime category UPDATE: invalid ID"
+            )
+            return
+        }
+
+        let request: NSFetchRequest<Category> =
+            Category.fetchRequest()
+
+        request.fetchLimit = 1
+        request.predicate = NSPredicate(
+            format: "id == %@",
+            categoryID as CVarArg
+        )
+
+        do {
+
+            let localCategory = try context.fetch(request).first
+
+            AppLogger.shared.info(
+                "Realtime UPDATE id: \(categoryID.uuidString)"
+            )
+
+            AppLogger.shared.info(
+                "Local category found: \(localCategory != nil)"
+            )
+
+            guard let category = localCategory else {
+
+                AppLogger.shared.info(
+                    "Realtime category UPDATE: local category not found"
+                )
+
+                return
+            }
+
+            if case let .string(value) = record["name"] {
+                category.name = value
+            }
+
+            if case let .string(value) = record["icon"] {
+                category.icon = value
+            }
+
+            if case let .bool(value) = record["is_default"] {
+                category.is_default = value
+            }
+
+            if case let .string(value) = record["user_id"] {
+                category.userID = UUID(uuidString: value)
+            }
+
+            try context.save()
+
+            AppLogger.shared.info(
+                "Realtime category UPDATE applied: \(category.name ?? "No name")"
+            )
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Realtime category UPDATE failed: \(error.localizedDescription)"
+            )
+        }
+    }
+    
+    // MARK: - Apply Realtime category DELETE
+
+    private func applyRealtimeCategoryDelete(
+        _ record: [String: AnyJSON]
+    ) {
+
+        guard
+            case let .string(idString) = record["id"],
+            let categoryID = UUID(uuidString: idString)
+        else {
+            AppLogger.shared.error(
+                "Realtime category DELETE: invalid ID"
+            )
+            return
+        }
+
+        let request: NSFetchRequest<Category> =
+            Category.fetchRequest()
+
+        request.fetchLimit = 1
+        request.predicate = NSPredicate(
+            format: "id == %@",
+            categoryID as CVarArg
+        )
+
+        do {
+
+            guard let category = try context.fetch(request).first else {
+
+                AppLogger.shared.info(
+                    "Realtime category DELETE: local category not found"
+                )
+
+                return
+            }
+
+            let name = category.name ?? "No name"
+
+            context.delete(category)
+
+            try context.save()
+
+            AppLogger.shared.info(
+                "Realtime category DELETE applied: \(name)"
+            )
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Realtime category DELETE failed: \(error.localizedDescription)"
             )
         }
     }
@@ -228,6 +437,160 @@ final class SyncService {
             )
         }
     }
+    
+    // MARK: - Realtime expenses
+
+    func startExpensesRealtime() async {
+
+        guard expensesChannel == nil else {
+            return
+        }
+
+        do {
+
+            let user = try await client.auth.session.user
+
+            let channel = client.channel(
+                "expenses-realtime-\(user.id.uuidString)"
+            )
+
+            let changes = channel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "expenses"
+            )
+
+            expensesChannel = channel
+
+            Task { @MainActor in
+
+                for await change in changes {
+
+                    switch change {
+
+                    case .insert(let action):
+
+                        self.applyRealtimeExpenseInsert(
+                            action.record
+                        )
+
+                        AppLogger.shared.info(
+                            "Realtime expense INSERT received"
+                        )
+
+                    case .update(let action):
+
+                        AppLogger.shared.info(
+                            "Realtime expense UPDATE received"
+                        )
+
+                    case .delete(let action):
+
+                        AppLogger.shared.info(
+                            "Realtime expense DELETE received"
+                        )
+                    }
+                }
+            }
+
+            try await channel.subscribeWithError()
+
+            AppLogger.shared.info(
+                "Expenses Realtime subscribed"
+            )
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Expenses Realtime failed: \(error.localizedDescription)"
+            )
+        }
+    }
+    
+    // MARK: - Apply Realtime expense INSERT
+
+    private func applyRealtimeExpenseInsert(
+        _ record: [String: AnyJSON]
+    ) {
+
+        guard
+            case let .string(idString) = record["id"],
+            let expenseID = UUID(uuidString: idString)
+        else {
+            AppLogger.shared.error(
+                "Realtime expense INSERT: invalid ID"
+            )
+            return
+        }
+
+        let request: NSFetchRequest<Expense> =
+            Expense.fetchRequest()
+
+        request.fetchLimit = 1
+        request.predicate = NSPredicate(
+            format: "id == %@",
+            expenseID as CVarArg
+        )
+
+        do {
+
+            if try context.fetch(request).first != nil {
+
+                AppLogger.shared.info(
+                    "Realtime expense INSERT skipped: already exists"
+                )
+
+                return
+            }
+
+            let expense = Expense(context: context)
+
+            expense.id = expenseID
+
+            if case let .string(value) = record["title"] {
+                expense.title = value
+            }
+
+            if case let .double(value) = record["amount"] {
+                expense.amount = value
+            }
+
+            if case let .string(value) = record["date"] {
+
+                let formatter = ISO8601DateFormatter()
+
+                if let date = formatter.date(from: value) {
+                    expense.date = date
+                }
+            }
+
+            if case let .string(value) = record["merchant_name"] {
+                expense.merchantName = value
+            }
+
+            if case let .string(value) = record["source"] {
+                expense.source = value
+            }
+
+            if case let .string(value) = record["transaction_id"] {
+                expense.transactionID = value
+            }
+
+            try context.save()
+
+            AppLogger.shared.info(
+                "Realtime expense INSERT applied: \(expense.title ?? "No title")"
+            )
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Realtime expense INSERT failed: \(error.localizedDescription)"
+            )
+        }
+    }
+    
+    
 
     // MARK: - Delete expense
 
