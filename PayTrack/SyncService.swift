@@ -16,8 +16,98 @@ final class SyncService {
 
     private let client = SupabaseManager.shared.client
     private let context = PersistenceController.shared.container.viewContext
+    
+    private var categoriesChannel: RealtimeChannelV2?
 
     private init() {
+    }
+    
+    // MARK: - Realtime categories
+
+    func startCategoriesRealtime() async {
+
+        guard categoriesChannel == nil else {
+            return
+        }
+
+        do {
+
+            let user = try await client.auth.session.user
+
+            let channel = client.channel(
+                "categories-realtime-\(user.id.uuidString)"
+            )
+
+            _ = channel.onPostgresChange(
+                InsertAction.self,
+                schema: "public",
+                table: "categories"
+            ) { action in
+
+                Task { @MainActor in
+                    AppLogger.shared.info(
+                        "Realtime category INSERT: \(action.record)"
+                    )
+                }
+            }
+
+            _ = channel.onPostgresChange(
+                UpdateAction.self,
+                schema: "public",
+                table: "categories"
+            ) { action in
+
+                Task { @MainActor in
+                    AppLogger.shared.info(
+                        "Realtime category UPDATE: \(action.record)"
+                    )
+                }
+            }
+
+            _ = channel.onPostgresChange(
+                DeleteAction.self,
+                schema: "public",
+                table: "categories"
+            ) { action in
+
+                Task { @MainActor in
+                    AppLogger.shared.info(
+                        "Realtime category DELETE: \(action.oldRecord)"
+                    )
+                }
+            }
+
+            categoriesChannel = channel
+
+            try await channel.subscribeWithError()
+
+            AppLogger.shared.info(
+                "Categories Realtime subscribed"
+            )
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Categories Realtime failed: \(error.localizedDescription)"
+            )
+        }
+    }
+    
+    // MARK: - Stop Realtime categories
+
+    func stopCategoriesRealtime() async {
+
+        guard let channel = categoriesChannel else {
+            return
+        }
+
+        await client.removeChannel(channel)
+
+        categoriesChannel = nil
+
+        AppLogger.shared.info(
+            "Categories Realtime unsubscribed"
+        )
     }
 
     // MARK: - Prepare local data for user

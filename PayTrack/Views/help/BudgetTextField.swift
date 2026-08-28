@@ -53,7 +53,7 @@ struct BudgetTextField: UIViewRepresentable {
                 "done",
                 comment: ""
             ),
-            style: .done,
+            style: .prominent,
             target: context.coordinator,
             action: #selector(
                 Coordinator.doneTapped

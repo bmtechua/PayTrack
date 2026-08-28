@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24512" systemVersion="25F84" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
     <entity name="Category" representedClassName="Category" syncable="YES" codeGenerationType="class">
-        <attribute name="icon" optional="YES" attributeType="String" storedInTruthFile="YES"/>
-        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" storedInTruthFile="YES"/>
-        <attribute name="is_default" optional="YES" attributeType="Boolean" usesScalarValueType="YES" storedInTruthFile="YES"/>
-        <attribute name="name" optional="YES" attributeType="String" storedInTruthFile="YES"/>
-        <attribute name="userID" optional="YES" attributeType="UUID" usesScalarValueType="NO" storedInTruthFile="YES"/>
+        <attribute name="icon" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="is_default" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="userID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <relationship name="expenses" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Expense" inverseName="category" inverseEntity="Expense"/>
     </entity>
     <entity name="Expense" representedClassName="Expense" syncable="YES" codeGenerationType="class">

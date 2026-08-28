@@ -42,6 +42,10 @@ struct PayTrackApp: App {
                 ).id(language)
 
                 .preferredColorScheme(selectedScheme())
+            
+                .task {
+                    await AuthService.shared.loadCurrentUser()
+                }
         }
     }
 
