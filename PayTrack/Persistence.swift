@@ -38,66 +38,9 @@ struct PersistenceController {
                     "Unresolved error \(error), \(error.userInfo)"
                 )
             }
-
-            container.viewContext.perform {
-                PersistenceController.setupDefaultCategories(
-                    context: container.viewContext
-                )
-            }
         }
 
         container.viewContext.automaticallyMergesChangesFromParent = true
     }
 
-    private static func setupDefaultCategories(
-        context: NSManagedObjectContext
-    ) {
-
-        let request: NSFetchRequest<Category> =
-            Category.fetchRequest()
-
-        do {
-
-            let categories = try context.fetch(request)
-
-            let defaultNames = [
-                "Food",
-                "House",
-                "Relax",
-                "Transport",
-                "Other"
-            ]
-
-            for name in defaultNames {
-
-                if let category = categories.first(
-                    where: { $0.name == name }
-                ) {
-
-                    category.isDefault = true
-
-                } else {
-
-                    let category = Category(context: context)
-
-                    category.id = UUID()
-                    category.name = name
-                    category.icon = "📌"
-                    category.isDefault = true
-                }
-            }
-
-            try context.save()
-
-            AppLogger.shared.info(
-                "Default categories checked successfully"
-            )
-
-        } catch {
-
-            AppLogger.shared.error(
-                "Default categories setup failed: \(error.localizedDescription)"
-            )
-        }
-    }
 }

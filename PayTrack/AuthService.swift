@@ -1,10 +1,3 @@
-//
-//  AuthService.swift
-//  PayTrack
-//
-//  Created by bmtech on 26.08.2026.
-//
-
 import Foundation
 import Combine
 import Supabase
@@ -18,69 +11,83 @@ final class AuthService: ObservableObject {
 
     @Published private(set) var user: User?
 
-    private init() {
-    }
+    private init() {}
+
+    // MARK: - Load current user
 
     func loadCurrentUser() async {
-
         do {
-
             user = try await client.auth.session.user
 
             AppLogger.shared.info(
                 "Current user loaded: \(user?.email ?? "unknown")"
             )
-
         } catch {
-
             user = nil
         }
     }
 
-    func signUp(email: String, password: String) async throws {
+    // MARK: - Sign up
+
+    func signUp(
+        email: String,
+        password: String
+    ) async throws {
+
+        let cleanEmail = email
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
 
         let response = try await client.auth.signUp(
-            email: email,
+            email: cleanEmail,
             password: password
         )
 
         user = response.user
 
         AppLogger.shared.info(
-            "Registration successful: \(user?.email ?? email)"
+            "Registration successful: \(user?.email ?? cleanEmail)"
         )
 
-        // Якщо після реєстрації вже є активна сесія —
-        // синхронізуємо локальні дані.
-        do {
+        await SyncService.shared.prepareForUser(
+            response.user.id
+        )
 
-            _ = try await client.auth.session
+        await SyncService.shared.createDefaultCategories(
+            for: response.user.id
+        )
 
-            AppLogger.shared.info(
-                "Registration sync started"
-            )
+        AppLogger.shared.info(
+            "Registration sync started"
+        )
 
-            await SyncService.shared.syncAll()
-
-        } catch {
-
-            AppLogger.shared.info(
-                "Registration sync skipped: no active session"
-            )
-        }
+        await SyncService.shared.syncAll()
     }
 
-    func signIn(email: String, password: String) async throws {
+    // MARK: - Sign in
+
+    func signIn(
+        email: String,
+        password: String
+    ) async throws {
+
+        let cleanEmail = email
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
 
         let session = try await client.auth.signIn(
-            email: email,
+            email: cleanEmail,
             password: password
         )
 
         user = session.user
 
         AppLogger.shared.info(
-            "Login successful: \(user?.email ?? email)"
+            "Login successful: \(user?.email ?? cleanEmail)"
+        )
+
+        await SyncService.shared.prepareForUser(
+            session.user.id
         )
 
         AppLogger.shared.info(
@@ -89,6 +96,8 @@ final class AuthService: ObservableObject {
 
         await SyncService.shared.syncAll()
     }
+
+    // MARK: - Sign out
 
     func signOut() async throws {
 
