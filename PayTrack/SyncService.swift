@@ -480,11 +480,19 @@ final class SyncService {
 
                     case .update(let action):
 
+                        self.applyRealtimeExpenseUpdate(
+                            action.record
+                        )
+
                         AppLogger.shared.info(
                             "Realtime expense UPDATE received"
                         )
 
                     case .delete(let action):
+
+                        self.applyRealtimeExpenseDelete(
+                            action.oldRecord
+                        )
 
                         AppLogger.shared.info(
                             "Realtime expense DELETE received"
@@ -523,29 +531,59 @@ final class SyncService {
             return
         }
 
-        let request: NSFetchRequest<Expense> =
+        // Check by Expense ID
+        let idRequest: NSFetchRequest<Expense> =
             Expense.fetchRequest()
 
-        request.fetchLimit = 1
-        request.predicate = NSPredicate(
+        idRequest.fetchLimit = 1
+        idRequest.predicate = NSPredicate(
             format: "id == %@",
             expenseID as CVarArg
         )
 
         do {
 
-            if try context.fetch(request).first != nil {
+            if try context.fetch(idRequest).first != nil {
 
                 AppLogger.shared.info(
-                    "Realtime expense INSERT skipped: already exists"
+                    "Realtime expense INSERT skipped: ID already exists"
                 )
 
                 return
             }
 
+            // Check by bank transaction ID
+            if case let .string(transactionID) = record["transaction_id"],
+               !transactionID.isEmpty {
+
+                let transactionRequest: NSFetchRequest<Expense> =
+                    Expense.fetchRequest()
+
+                transactionRequest.fetchLimit = 1
+                transactionRequest.predicate = NSPredicate(
+                    format: "transactionID == %@",
+                    transactionID
+                )
+
+                if try context.fetch(transactionRequest).first != nil {
+
+                    AppLogger.shared.info(
+                        "Realtime expense INSERT skipped: transaction already exists"
+                    )
+
+                    return
+                }
+            }
+
             let expense = Expense(context: context)
 
             expense.id = expenseID
+
+            if case let .string(value) = record["user_id"] {
+                // Не використовуємо user_id для Core Data Expense,
+                // якщо такого атрибута немає в моделі.
+                _ = value
+            }
 
             if case let .string(value) = record["title"] {
                 expense.title = value
@@ -576,6 +614,22 @@ final class SyncService {
                 expense.transactionID = value
             }
 
+            if case let .string(categoryIDString) = record["category_id"],
+               let categoryID = UUID(uuidString: categoryIDString) {
+
+                let categoryRequest: NSFetchRequest<Category> =
+                    Category.fetchRequest()
+
+                categoryRequest.fetchLimit = 1
+                categoryRequest.predicate = NSPredicate(
+                    format: "id == %@",
+                    categoryID as CVarArg
+                )
+
+                expense.category =
+                    try context.fetch(categoryRequest).first
+            }
+
             try context.save()
 
             AppLogger.shared.info(
@@ -586,6 +640,157 @@ final class SyncService {
 
             AppLogger.shared.error(
                 "Realtime expense INSERT failed: \(error.localizedDescription)"
+            )
+        }
+    }
+    
+    // MARK: - Apply Realtime expense UPDATE
+
+    private func applyRealtimeExpenseUpdate(
+        _ record: [String: AnyJSON]
+    ) {
+
+        guard
+            case let .string(idString) = record["id"],
+            let expenseID = UUID(uuidString: idString)
+        else {
+            AppLogger.shared.error(
+                "Realtime expense UPDATE: invalid ID"
+            )
+            return
+        }
+
+        let request: NSFetchRequest<Expense> =
+            Expense.fetchRequest()
+
+        request.fetchLimit = 1
+        request.predicate = NSPredicate(
+            format: "id == %@",
+            expenseID as CVarArg
+        )
+
+        do {
+
+            guard let expense = try context.fetch(request).first else {
+
+                AppLogger.shared.info(
+                    "Realtime expense UPDATE: local expense not found"
+                )
+
+                return
+            }
+
+            if case let .string(value) = record["title"] {
+                expense.title = value
+            }
+
+            if case let .double(value) = record["amount"] {
+                expense.amount = value
+            }
+
+            if case let .string(value) = record["date"] {
+
+                let formatter = ISO8601DateFormatter()
+
+                if let date = formatter.date(from: value) {
+                    expense.date = date
+                }
+            }
+
+            if case let .string(value) = record["merchant_name"] {
+                expense.merchantName = value
+            }
+
+            if case let .string(value) = record["source"] {
+                expense.source = value
+            }
+
+            if case let .string(value) = record["transaction_id"] {
+                expense.transactionID = value
+            }
+
+            if case let .string(categoryIDString) = record["category_id"],
+               let categoryID = UUID(uuidString: categoryIDString) {
+
+                let categoryRequest: NSFetchRequest<Category> =
+                    Category.fetchRequest()
+
+                categoryRequest.fetchLimit = 1
+                categoryRequest.predicate = NSPredicate(
+                    format: "id == %@",
+                    categoryID as CVarArg
+                )
+
+                expense.category =
+                    try context.fetch(categoryRequest).first
+            } else {
+                expense.category = nil
+            }
+
+            try context.save()
+
+            AppLogger.shared.info(
+                "Realtime expense UPDATE applied: \(expense.title ?? "No title")"
+            )
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Realtime expense UPDATE failed: \(error.localizedDescription)"
+            )
+        }
+    }
+    
+    // MARK: - Apply Realtime expense DELETE
+
+    private func applyRealtimeExpenseDelete(
+        _ record: [String: AnyJSON]
+    ) {
+
+        guard
+            case let .string(idString) = record["id"],
+            let expenseID = UUID(uuidString: idString)
+        else {
+            AppLogger.shared.error(
+                "Realtime expense DELETE: invalid ID"
+            )
+            return
+        }
+
+        let request: NSFetchRequest<Expense> =
+            Expense.fetchRequest()
+
+        request.fetchLimit = 1
+        request.predicate = NSPredicate(
+            format: "id == %@",
+            expenseID as CVarArg
+        )
+
+        do {
+
+            guard let expense = try context.fetch(request).first else {
+
+                AppLogger.shared.info(
+                    "Realtime expense DELETE: local expense not found"
+                )
+
+                return
+            }
+
+            let title = expense.title ?? "No title"
+
+            context.delete(expense)
+
+            try context.save()
+
+            AppLogger.shared.info(
+                "Realtime expense DELETE applied: \(title)"
+            )
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Realtime expense DELETE failed: \(error.localizedDescription)"
             )
         }
     }
