@@ -10,6 +10,154 @@ import CoreData
 import Supabase
 
 extension SyncService {
+    
+    private func currentUserID() async throws -> UUID {
+            let user = try await client.auth.session.user
+            return user.id
+        }
+    
+    private func uploadLocalCategories(for userID: UUID) async throws {
+        let request: NSFetchRequest<Category> = Category.fetchRequest()
+
+        request.predicate = NSPredicate(
+            format: "userID == %@",
+            userID as CVarArg
+        )
+
+        let categories = try context.fetch(request)
+
+        for category in categories {
+            await syncOneCategory(category)
+        }
+    }
+    
+    private func removeLocalCategories(for userID: UUID) throws {
+        let request: NSFetchRequest<Category> =
+            Category.fetchRequest()
+
+        request.predicate = NSPredicate(
+            format: "userID == %@",
+            userID as CVarArg
+        )
+
+        let categories = try context.fetch(request)
+
+        for category in categories {
+            context.delete(category)
+        }
+    }
+    
+    private func uploadLocalExpenses() async throws {
+        let request: NSFetchRequest<Expense> =
+            Expense.fetchRequest()
+
+        let expenses = try context.fetch(request)
+
+        for expense in expenses {
+            await syncOneExpense(expense)
+        }
+    }
+    
+    private func removeLocalExpenses() throws {
+        let request: NSFetchRequest<Expense> =
+            Expense.fetchRequest()
+
+        let expenses = try context.fetch(request)
+
+        for expense in expenses {
+            context.delete(expense)
+        }
+    }
+    
+    private func downloadRemoteCategories(
+        for userID: UUID
+    ) async throws -> [[String: AnyJSON]] {
+
+        return try await client
+            .from("categories")
+            .select()
+            .eq(
+                "user_id",
+                value: userID.uuidString
+            )
+            .execute()
+            .value
+    }
+    
+    private func saveRemoteCategories(
+        _ remoteCategories: [[String: AnyJSON]],
+        for userID: UUID
+    ) throws {
+
+        for remoteCategory in remoteCategories {
+
+            guard
+                case let .string(idString) = remoteCategory["id"],
+                let categoryID = UUID(uuidString: idString)
+            else {
+                continue
+            }
+
+            let category = Category(context: context)
+
+            category.id = categoryID
+            category.userID = userID
+
+            if case let .string(value) = remoteCategory["name"] {
+                category.name = value
+            }
+
+            if case let .string(value) = remoteCategory["icon"] {
+                category.icon = value
+            }
+
+            if case let .bool(value) = remoteCategory["is_default"] {
+                category.is_default = value
+            }
+        }
+
+        try context.save()
+    }
+    
+    private func downloadRemoteExpenses(
+        for userID: UUID
+    ) async throws -> [[String: AnyJSON]] {
+
+        return try await client
+            .from("expenses")
+            .select()
+            .eq(
+                "user_id",
+                value: userID.uuidString
+            )
+            .execute()
+            .value
+    }
+    
+    private func localCategoriesByID(
+        for userID: UUID
+    ) throws -> [UUID: Category] {
+
+        let request: NSFetchRequest<Category> =
+            Category.fetchRequest()
+
+        request.predicate = NSPredicate(
+            format: "userID == %@",
+            userID as CVarArg
+        )
+
+        let categories = try context.fetch(request)
+
+        var categoriesByID: [UUID: Category] = [:]
+
+        for category in categories {
+            if let id = category.id {
+                categoriesByID[id] = category
+            }
+        }
+
+        return categoriesByID
+    }
 
     func syncAll() async {
 
@@ -20,156 +168,41 @@ extension SyncService {
 
             // MARK: - Upload local categories
 
-            let localCategoryRequest: NSFetchRequest<Category> =
-                Category.fetchRequest()
-
-            localCategoryRequest.predicate = NSPredicate(
-                format: "userID == %@",
-                userID as CVarArg
-            )
-
-            let localCategories =
-                try context.fetch(localCategoryRequest)
-
-            for category in localCategories {
-
-                await syncOneCategory(category)
-
-            }
+            try await uploadLocalCategories(for: userID)
 
             // MARK: - Upload local expenses
 
-            let localExpenseRequest: NSFetchRequest<Expense> =
-                Expense.fetchRequest()
-
-            let localExpenses =
-                try context.fetch(localExpenseRequest)
-
-            for expense in localExpenses {
-
-                await syncOneExpense(expense)
-
-            }
+            try await uploadLocalExpenses()
 
             // MARK: - Categories from Supabase
 
-            let remoteCategories: [[String: AnyJSON]] =
-                try await client
-                    .from("categories")
-                    .select()
-                    .eq(
-                        "user_id",
-                        value: userID.uuidString
-                    )
-                    .execute()
-                    .value
+            let remoteCategories =
+                try await downloadRemoteCategories(for: userID)
 
             // Remove local categories ONLY for current user
 
-            let categoriesToRemove =
-                try context.fetch(localCategoryRequest)
-
-            for category in categoriesToRemove {
-
-                context.delete(category)
-
-            }
+            try removeLocalCategories(for: userID)
 
             // Create categories from Supabase
 
-            for remoteCategory in remoteCategories {
-
-                guard
-                    case let .string(idString) =
-                        remoteCategory["id"],
-
-                    let categoryID =
-                        UUID(uuidString: idString)
-
-                else {
-
-                    continue
-
-                }
-
-                let category = Category(context: context)
-
-                category.id = categoryID
-                category.userID = userID
-
-                if case let .string(value) =
-                    remoteCategory["name"] {
-
-                    category.name = value
-
-                }
-
-                if case let .string(value) =
-                    remoteCategory["icon"] {
-
-                    category.icon = value
-
-                }
-
-                if case let .bool(value) =
-                    remoteCategory["is_default"] {
-
-                    category.is_default = value
-
-                }
-
-            }
-
-            try context.save()
+            try saveRemoteCategories(
+                remoteCategories,
+                for: userID
+            )
 
             // MARK: - Expenses from Supabase
 
-            let remoteExpenses: [[String: AnyJSON]] =
-                try await client
-                    .from("expenses")
-                    .select()
-                    .eq(
-                        "user_id",
-                        value: userID.uuidString
-                    )
-                    .execute()
-                    .value
+            let remoteExpenses =
+                try await downloadRemoteExpenses(for: userID)
 
             // Remove local expenses
-
-            let expensesToRemove =
-                try context.fetch(localExpenseRequest)
-
-            for expense in expensesToRemove {
-
-                context.delete(expense)
-
-            }
+            
+            try removeLocalExpenses()
 
             // Get categories for relationships
 
-            let categoryRequest: NSFetchRequest<Category> =
-                Category.fetchRequest()
-
-            categoryRequest.predicate = NSPredicate(
-                format: "userID == %@",
-                userID as CVarArg
-            )
-
-            let allCategories =
-                try context.fetch(categoryRequest)
-
-            var categoriesByID: [UUID: Category] = [:]
-
-            for category in allCategories {
-
-                if let id = category.id {
-
-                    categoriesByID[id] = category
-
-                }
-
-            }
+            let categoriesByID =
+                try localCategoriesByID(for: userID)
 
             let dateFormatter = ISO8601DateFormatter()
 
@@ -255,7 +288,7 @@ extension SyncService {
             try context.save()
 
             AppLogger.shared.info(
-                "Full sync completed: \(allCategories.count) categories, \(remoteExpenses.count) expenses"
+                "Full sync completed: \(categoriesByID.count) categories, \(remoteExpenses.count) expenses"
             )
 
         } catch {

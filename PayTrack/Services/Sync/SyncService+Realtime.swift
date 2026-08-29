@@ -184,4 +184,20 @@ extension SyncService {
             )
         }
     }
+    
+    // MARK: - Stop Realtime expenses
+
+    func stopExpensesRealtime() async {
+        guard let channel = expensesChannel else {
+            return
+        }
+
+        await client.removeChannel(channel)
+
+        expensesChannel = nil
+
+        AppLogger.shared.info(
+            "Expenses Realtime unsubscribed"
+        )
+    }
 }

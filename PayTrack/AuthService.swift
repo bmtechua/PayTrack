@@ -16,25 +16,19 @@ final class AuthService: ObservableObject {
     // MARK: - Load current user
 
     func loadCurrentUser() async {
-
         do {
-
             user = try await client.auth.session.user
 
             AppLogger.shared.info(
                 "Current user loaded: \(user?.email ?? "unknown")"
             )
-
+            
             if let userID = user?.id {
-
                 await SyncService.shared.prepareForUser(userID)
-
                 await SyncService.shared.startCategoriesRealtime()
                 await SyncService.shared.startExpensesRealtime()
             }
-
         } catch {
-
             user = nil
         }
     }
@@ -69,6 +63,7 @@ final class AuthService: ObservableObject {
             for: response.user.id
         )
         await SyncService.shared.startCategoriesRealtime()
+        await SyncService.shared.startExpensesRealtime()
 
         AppLogger.shared.info(
             "Registration sync started"
@@ -103,6 +98,7 @@ final class AuthService: ObservableObject {
             session.user.id
         )
         await SyncService.shared.startCategoriesRealtime()
+        await SyncService.shared.startExpensesRealtime()
 
         AppLogger.shared.info(
             "Login sync started"
@@ -116,6 +112,7 @@ final class AuthService: ObservableObject {
     func signOut() async throws {
         
         await SyncService.shared.stopCategoriesRealtime()
+        await SyncService.shared.stopExpensesRealtime()
 
         try await client.auth.signOut()
 

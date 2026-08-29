@@ -275,9 +275,18 @@ extension SyncService {
             if case let .string(value) = record["title"] {
                 expense.title = value
             }
+            
+            if let amount = record["amount"] {
+                switch amount {
+                case .double(let value):
+                    expense.amount = value
 
-            if case let .double(value) = record["amount"] {
-                expense.amount = value
+                case .integer(let value):
+                    expense.amount = Double(value)
+
+                default:
+                    break
+                }
             }
 
             if case let .string(value) = record["date"] {
