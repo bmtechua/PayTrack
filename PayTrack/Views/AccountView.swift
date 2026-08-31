@@ -8,10 +8,15 @@ struct AccountView: View {
 
     @State private var email = ""
     @State private var password = ""
+
     @State private var isPasswordVisible = false
     @State private var isRegistering = false
     @State private var isLoading = false
+
     @State private var errorMessage: String?
+    @State private var showForgotPassword = false
+    
+    @State private var showChangePassword = false
 
     var body: some View {
 
@@ -24,8 +29,71 @@ struct AccountView: View {
             }
         }
         .navigationTitle("account")
+
         .task {
             await authService.loadCurrentUser()
+        }
+
+        // MARK: - Forgot password
+
+        .sheet(isPresented: $showForgotPassword) {
+            ForgotPasswordView(email: email)
+        }
+        .sheet(isPresented: $showChangePassword) {
+            NavigationStack {
+                ChangePasswordView()
+            }
+        }
+        .onChange(of: authService.isPasswordRecovery) { _, isRecovery in
+            if isRecovery {
+                showChangePassword = true
+            }
+        }
+
+        // MARK: - Error alert
+
+        .alert(
+            "error",
+            isPresented: Binding(
+                get: {
+                    errorMessage != nil
+                },
+                set: {
+                    if !$0 {
+                        errorMessage = nil
+                    }
+                }
+            )
+        ) {
+
+            if errorMessage == String(
+                localized: "invalid_login_credentials"
+            ) {
+
+                Button("forgot_password") {
+
+                    AppLogger.shared.info(
+                        "Forgot password selected from login error"
+                    )
+
+                    errorMessage = nil
+                    showForgotPassword = true
+                }
+
+                Button("ok", role: .cancel) {
+                    errorMessage = nil
+                }
+
+            } else {
+
+                Button("ok", role: .cancel) {
+                    errorMessage = nil
+                }
+            }
+
+        } message: {
+
+            Text(errorMessage ?? "")
         }
     }
 
@@ -42,22 +110,26 @@ struct AccountView: View {
 
             Section {
 
+                NavigationLink {
+
+                    ChangePasswordView()
+
+                } label: {
+
+                    Text("change_password")
+                }
+
                 Button("sign_out", role: .destructive) {
+
+                    AppLogger.shared.info(
+                        "Logout attempt"
+                    )
 
                     Task {
                         await signOut()
                     }
                 }
                 .disabled(isLoading)
-            }
-
-            if let errorMessage {
-
-                Section {
-
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
-                }
             }
         }
     }
@@ -150,6 +222,12 @@ struct AccountView: View {
                     isRegistering.toggle()
                     errorMessage = nil
 
+                    AppLogger.shared.info(
+                        isRegistering
+                        ? "Registration mode selected"
+                        : "Login mode selected"
+                    )
+
                 } label: {
 
                     Text(
@@ -157,15 +235,6 @@ struct AccountView: View {
                         ? "already_have_account_sign_in"
                         : "create_account"
                     )
-                }
-            }
-
-            if let errorMessage {
-
-                Section {
-
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
                 }
             }
         }
@@ -178,26 +247,68 @@ struct AccountView: View {
         isLoading = true
         errorMessage = nil
 
+        let cleanEmail = email
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            .lowercased()
+
+        if isRegistering {
+
+            AppLogger.shared.info(
+                "Registration attempt: \(cleanEmail)"
+            )
+
+        } else {
+
+            AppLogger.shared.info(
+                "Login attempt: \(cleanEmail)"
+            )
+        }
+
         do {
 
             if isRegistering {
 
                 try await authService.signUp(
-                    email: email,
+                    email: cleanEmail,
                     password: password
+                )
+
+                AppLogger.shared.info(
+                    "Registration completed: \(cleanEmail)"
                 )
 
             } else {
 
                 try await authService.signIn(
-                    email: email,
+                    email: cleanEmail,
                     password: password
+                )
+
+                AppLogger.shared.info(
+                    "Login completed: \(cleanEmail)"
                 )
             }
 
         } catch {
 
-            errorMessage = error.localizedDescription
+            AppLogger.shared.error(
+                isRegistering
+                ? "Registration failed: \(error.localizedDescription)"
+                : "Login failed: \(error.localizedDescription)"
+            )
+
+            if !isRegistering {
+
+                errorMessage = String(
+                    localized: "invalid_login_credentials"
+                )
+
+            } else {
+
+                errorMessage = error.localizedDescription
+            }
         }
 
         isLoading = false
@@ -214,7 +325,15 @@ struct AccountView: View {
 
             try await authService.signOut()
 
+            AppLogger.shared.info(
+                "Logout successful"
+            )
+
         } catch {
+
+            AppLogger.shared.error(
+                "Logout failed: \(error.localizedDescription)"
+            )
 
             errorMessage = error.localizedDescription
         }
@@ -222,4 +341,3 @@ struct AccountView: View {
         isLoading = false
     }
 }
-

@@ -8,11 +8,26 @@
 "account" = "Обліковий запис";
 "email" = "Email";
 "password" = "Пароль";
+
 "sign_in" = "Увійти";
 "sign_out" = "Вийти";
 "register" = "Зареєструватися";
 "create_account" = "Створити акаунт";
 "already_have_account_sign_in" = "Вже маєте акаунт? Увійти";
+
+"change_password" = "Змінити пароль";
+"new_password" = "Новий пароль";
+"confirm_password" = "Повторіть пароль";
+"password_too_short" = "Пароль має містити щонайменше 6 символів";
+"passwords_do_not_match" = "Паролі не збігаються";
+"password_changed" = "Пароль успішно змінено";
+
+"error" = "Помилка";
+"forgot_password" = "Забули пароль?";
+"password_recovery" = "Відновлення пароля";
+"send_reset_email" = "Надіслати лист";
+"password_reset_email_sent" = "Лист для відновлення пароля надіслано на вашу електронну адресу.";
+"invalid_login_credentials" = "Неправильний email або пароль";
 
 "theme_system" = "Система";
 "theme_light" = "Світла";
@@ -28,7 +43,7 @@
 "this_month" = "Цього місяця";
 "today" = "Сьогодні";
 
-"expenses" = "Витрат";
+"expenses" = "Витрати";
 "expense" = "Витрата";
 "all_expenses" = "Всі витрати";
 "expense_name" = "Назва";

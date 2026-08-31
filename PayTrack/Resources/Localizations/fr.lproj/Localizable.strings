@@ -8,11 +8,26 @@
 "account" = "Compte";
 "email" = "E-mail";
 "password" = "Mot de passe";
+
 "sign_in" = "Se connecter";
 "sign_out" = "Se déconnecter";
 "register" = "S'inscrire";
 "create_account" = "Créer un compte";
 "already_have_account_sign_in" = "Vous avez déjà un compte ? Se connecter";
+
+"change_password" = "Modifier le mot de passe";
+"new_password" = "Nouveau mot de passe";
+"confirm_password" = "Confirmer le mot de passe";
+"password_too_short" = "Le mot de passe doit contenir au moins 6 caractères";
+"passwords_do_not_match" = "Les mots de passe ne correspondent pas";
+"password_changed" = "Mot de passe modifié avec succès";
+
+"error" = "Erreur";
+"forgot_password" = "Mot de passe oublié ?";
+"password_recovery" = "Récupération du mot de passe";
+"send_reset_email" = "Envoyer l'e-mail";
+"password_reset_email_sent" = "Un e-mail de récupération du mot de passe a été envoyé à votre adresse e-mail.";
+"invalid_login_credentials" = "E-mail ou mot de passe incorrect";
 
 "theme_system" = "Système";
 "theme_light" = "Clair";

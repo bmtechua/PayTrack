@@ -10,8 +10,58 @@ final class AuthService: ObservableObject {
     private let client = SupabaseManager.shared.client
 
     @Published private(set) var user: User?
+    @Published private(set) var isPasswordRecovery = false
 
     private init() {}
+    
+    private var authStateTask: Task<Void, Never>?
+    
+    // MARK: - Auth state listener
+
+    func startAuthStateListener() {
+        authStateTask?.cancel()
+
+        authStateTask = Task { [weak self] in
+            guard let self else { return }
+
+            for await (event, session) in client.auth.authStateChanges {
+                switch event {
+
+                case .passwordRecovery:
+                    AppLogger.shared.info(
+                        "Password recovery event received"
+                    )
+
+                    await MainActor.run {
+                        self.isPasswordRecovery = true
+                        self.user = session?.user
+                    }
+
+                case .signedIn:
+                    AppLogger.shared.info(
+                        "Auth signed in event received"
+                    )
+
+                    await MainActor.run {
+                        self.user = session?.user
+                    }
+
+                case .signedOut:
+                    AppLogger.shared.info(
+                        "Auth signed out event received"
+                    )
+
+                    await MainActor.run {
+                        self.user = nil
+                        self.isPasswordRecovery = false
+                    }
+
+                default:
+                    break
+                }
+            }
+        }
+    }
 
     // MARK: - Load current user
 
@@ -106,6 +156,23 @@ final class AuthService: ObservableObject {
 
         await SyncService.shared.syncAll()
     }
+    
+    // MARK: - Change password
+
+    func changePassword(
+        newPassword: String
+    ) async throws {
+
+        try await client.auth.update(
+            user: UserAttributes(
+                password: newPassword
+            )
+        )
+
+        AppLogger.shared.info(
+            "Password changed successfully"
+        )
+    }
 
     // MARK: - Sign out
 
@@ -122,4 +189,33 @@ final class AuthService: ObservableObject {
             "Logout successful"
         )
     }
+    
+    // MARK: - Reset password
+
+    func resetPassword(email: String) async throws {
+
+        let cleanEmail = email
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            .lowercased()
+
+        let redirectURL = URL(
+            string: "paytrack://reset-password"
+        )!
+
+        AppLogger.shared.info(
+            "Password recovery requested: \(cleanEmail)"
+        )
+
+        try await client.auth.resetPasswordForEmail(
+            cleanEmail,
+            redirectTo: redirectURL
+        )
+
+        AppLogger.shared.info(
+            "Password recovery email sent: \(cleanEmail)"
+        )
+    }
+
 }

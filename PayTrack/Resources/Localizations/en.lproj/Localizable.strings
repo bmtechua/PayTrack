@@ -8,11 +8,26 @@
 "account" = "Account";
 "email" = "Email";
 "password" = "Password";
+
 "sign_in" = "Sign In";
 "sign_out" = "Sign Out";
 "register" = "Register";
 "create_account" = "Create Account";
 "already_have_account_sign_in" = "Already have an account? Sign In";
+
+"change_password" = "Change Password";
+"new_password" = "New Password";
+"confirm_password" = "Confirm Password";
+"password_too_short" = "Password must contain at least 6 characters";
+"passwords_do_not_match" = "Passwords do not match";
+"password_changed" = "Password changed successfully";
+
+"error" = "Error";
+"forgot_password" = "Forgot Password?";
+"password_recovery" = "Password Recovery";
+"send_reset_email" = "Send Email";
+"password_reset_email_sent" = "A password recovery email has been sent to your email address.";
+"invalid_login_credentials" = "Invalid email or password";
 
 "theme_system" = "System";
 "theme_light" = "Light";

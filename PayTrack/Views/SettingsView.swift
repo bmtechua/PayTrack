@@ -18,7 +18,7 @@ struct SettingsView: View {
     private var language = "uk"
 
     @AppStorage("theme")
-    private var theme: String = "Система"
+    private var theme: String = "system"
 
     @State
     private var budgetBeforeEditing: Double = 0
