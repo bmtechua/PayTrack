@@ -98,3 +98,8 @@
 "mail_unavailable_message" = "Mail is not configured on this device. Use the Share button instead.";
 "ok" = "OK";
 "done" = "Done";
+
+
+"about" = "About";
+"version" = "Version";
+"app_name" = "App";

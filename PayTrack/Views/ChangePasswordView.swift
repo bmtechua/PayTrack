@@ -211,9 +211,6 @@ struct ChangePasswordView: View {
                 newPassword: password
             )
 
-            AppLogger.shared.info(
-                "Password changed successfully"
-            )
 
             newPassword = ""
             confirmPassword = ""

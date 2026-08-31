@@ -1,13 +1,9 @@
-//
-//  MainTabView.swift
-//  PayTrack
-//
-//  Created by bmtech on 29.06.2026.
-//
-
 import SwiftUI
 
 struct MainTabView: View {
+
+    @ObservedObject
+    private var authService = AuthService.shared
 
     var body: some View {
 
@@ -21,7 +17,6 @@ struct MainTabView: View {
                     )
                 }
 
-
             AnalyticsView()
                 .tabItem {
                     Label(
@@ -29,7 +24,6 @@ struct MainTabView: View {
                         systemImage: "chart.bar"
                     )
                 }
-
 
             ExpensesListView()
                 .tabItem {
@@ -39,7 +33,6 @@ struct MainTabView: View {
                     )
                 }
 
-
             CategoriesView()
                 .tabItem {
                     Label(
@@ -47,7 +40,6 @@ struct MainTabView: View {
                         systemImage: "tag"
                     )
                 }
-
 
             SettingsView()
                 .tabItem {
@@ -57,9 +49,15 @@ struct MainTabView: View {
                     )
                 }
         }
+        .sheet(
+            isPresented: $authService.isPasswordRecovery
+        ) {
+            NavigationStack {
+                ChangePasswordView()
+            }
+        }
     }
 }
-
 
 #Preview {
     MainTabView()

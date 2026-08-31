@@ -10,7 +10,7 @@ final class AuthService: ObservableObject {
     private let client = SupabaseManager.shared.client
 
     @Published private(set) var user: User?
-    @Published private(set) var isPasswordRecovery = false
+    @Published var isPasswordRecovery = false
 
     private init() {}
     

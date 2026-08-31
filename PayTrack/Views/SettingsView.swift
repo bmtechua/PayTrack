@@ -5,8 +5,22 @@
 //  Created by bmtech on 30.06.2026.
 //
 import SwiftUI
+import Auth 
 
 struct SettingsView: View {
+    
+    @ObservedObject
+    private var authService = AuthService.shared
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+            ?? "—"
+    }
+
+    private var appBuild: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+            ?? "—"
+    }
 
     @AppStorage("monthlyBudget")
     private var monthlyBudget: Double = 5000
@@ -31,11 +45,23 @@ struct SettingsView: View {
             Form {
 
                 // MARK: - Account
+
                 Section("account") {
+
                     NavigationLink {
                         AccountView()
                     } label: {
-                        Text("account")
+
+                        VStack(alignment: .leading, spacing: 4) {
+
+                            Text("account")
+
+                            if let email = authService.user?.email {
+                                Text(email)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
                 }
                 
@@ -125,6 +151,25 @@ struct SettingsView: View {
                 }
 
 
+                // MARK: - About
+
+                Section("about") {
+
+                    HStack {
+                        Text("app_name")
+                        Spacer()
+                        Text("PayTrack")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Text("version")
+                        Spacer()
+                        Text("\(appVersion) (\(appBuild))")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                
                 // MARK: - Log
 
                 Section("app_log") {

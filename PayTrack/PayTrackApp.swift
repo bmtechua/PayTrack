@@ -36,9 +36,25 @@ struct PayTrackApp: App {
                     await AuthService.shared.loadCurrentUser()
                 }
                 .onOpenURL { url in
+
                     AppLogger.shared.info(
                         "Auth deep link received: \(url.absoluteString)"
                     )
+
+                    if url.scheme == "paytrack",
+                       url.host == "reset-password" {
+
+                        AppLogger.shared.info(
+                            "Password reset deep link detected"
+                        )
+
+                        AuthService.shared.isPasswordRecovery = true
+
+                        AppLogger.shared.info(
+                            "isPasswordRecovery set to true"
+                        )
+                    }
+
                     SupabaseManager.shared.client.auth.handle(url)
                 }
         }
