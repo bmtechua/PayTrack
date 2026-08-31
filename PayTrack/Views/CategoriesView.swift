@@ -11,9 +11,11 @@ import Supabase
 
 struct CategoriesView: View {
 
-    @Environment(\.managedObjectContext) private var context
+    @Environment(\.managedObjectContext)
+    private var context
 
-    @ObservedObject private var authService = AuthService.shared
+    @ObservedObject
+    private var authService = AuthService.shared
 
     @FetchRequest(
         sortDescriptors: [
@@ -26,6 +28,7 @@ struct CategoriesView: View {
     private var categories: FetchedResults<Category>
 
     @State private var newCategory = ""
+    @State private var showAddCategory = false
 
     var body: some View {
 
@@ -37,20 +40,16 @@ struct CategoriesView: View {
 
                 if authService.user != nil {
 
-                    HStack {
-
-                        TextField(
-                            "new_category",
-                            text: $newCategory
+                    Button {
+                        newCategory = ""
+                        showAddCategory = true
+                    } label: {
+                        Label(
+                            "add_category",
+                            systemImage: "plus"
                         )
-                        .textFieldStyle(.roundedBorder)
-
-                        Button {
-                            addCategory()
-                        } label: {
-                            Image(systemName: "plus")
-                        }
                     }
+                    .buttonStyle(.borderedProminent)
                     .padding()
                 }
 
@@ -61,7 +60,6 @@ struct CategoriesView: View {
                     ForEach(categories) { category in
 
                         HStack {
-
                             Text(category.icon ?? "📌")
 
                             Text(
@@ -78,17 +76,69 @@ struct CategoriesView: View {
                 }
             }
             .navigationTitle("categories")
+
+            // MARK: - Add category sheet
+
+            .sheet(isPresented: $showAddCategory) {
+
+                NavigationStack {
+
+                    Form {
+
+                        TextField(
+                            "category_name",
+                            text: $newCategory
+                        )
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.sentences)
+
+                        Button {
+                            addCategory()
+                            showAddCategory = false
+                        } label: {
+                            Text("add")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .disabled(
+                            newCategory
+                                .trimmingCharacters(
+                                    in: .whitespacesAndNewlines
+                                )
+                                .isEmpty
+                        )
+                    }
+                    .navigationTitle("add_category")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+
+                        ToolbarItem(
+                            placement: .cancellationAction
+                        ) {
+                            Button("cancel") {
+                                showAddCategory = false
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
+            }
         }
     }
 
     // MARK: - Add category
 
     private func addCategory() {
-        guard !newCategory.isEmpty else {
+
+        let categoryName = newCategory
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+        guard !categoryName.isEmpty else {
             return
         }
 
-        guard let user = AuthService.shared.user else {
+        guard let user = authService.user else {
             AppLogger.shared.error(
                 "Cannot add category: user is not logged in"
             )
@@ -98,16 +148,17 @@ struct CategoriesView: View {
         let category = Category(context: context)
 
         category.id = UUID()
-        category.name = newCategory
+        category.name = categoryName
         category.icon = "📌"
         category.is_default = false
         category.userID = user.id
 
         AppLogger.shared.info(
-            "Category added: \(newCategory)"
+            "Category added: \(categoryName)"
         )
 
         save()
+
         newCategory = ""
 
         Task {
@@ -115,10 +166,10 @@ struct CategoriesView: View {
         }
     }
 
-
     // MARK: - Delete category
 
     private func deleteCategory(offsets: IndexSet) {
+
         guard let index = offsets.first else {
             return
         }
@@ -151,6 +202,7 @@ struct CategoriesView: View {
         let categoryName = category.name ?? "unknown"
 
         // Move expenses to Other
+
         let expenseRequest: NSFetchRequest<Expense> =
             Expense.fetchRequest()
 
@@ -160,7 +212,9 @@ struct CategoriesView: View {
         )
 
         do {
-            let expenses = try context.fetch(expenseRequest)
+
+            let expenses =
+                try context.fetch(expenseRequest)
 
             for expense in expenses {
                 expense.category = otherCategory
@@ -171,6 +225,7 @@ struct CategoriesView: View {
             )
 
             // Delete local category
+
             context.delete(category)
 
             try context.save()
@@ -180,7 +235,9 @@ struct CategoriesView: View {
             )
 
             // Delete category from Supabase
+
             Task {
+
                 await SyncService.shared.deleteCategory(
                     id: categoryID,
                     name: categoryName
@@ -190,12 +247,12 @@ struct CategoriesView: View {
             }
 
         } catch {
+
             AppLogger.shared.error(
                 "Failed to delete category \(categoryName): \(error.localizedDescription)"
             )
         }
     }
-
 
     // MARK: - Save
 
@@ -219,7 +276,6 @@ struct CategoriesView: View {
 }
 
 #Preview {
-
     CategoriesView()
         .environment(
             \.managedObjectContext,

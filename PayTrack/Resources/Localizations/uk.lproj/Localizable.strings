@@ -5,6 +5,15 @@
 //  Created by bmtech on 30.06.2026.
 //
 
+"account" = "Обліковий запис";
+"email" = "Email";
+"password" = "Пароль";
+"sign_in" = "Увійти";
+"sign_out" = "Вийти";
+"register" = "Зареєструватися";
+"create_account" = "Створити акаунт";
+"already_have_account_sign_in" = "Вже маєте акаунт? Увійти";
+
 "theme_system" = "Система";
 "theme_light" = "Світла";
 "theme_dark" = "Темна";
@@ -38,6 +47,10 @@
 "no_category" = "Без категорії";
 "new_category" = "Нова категорія";
 "create_category_first" = "Створіть категорію спочатку";
+"add_category" = "Додати категорію";
+"category_name" = "Назва категорії";
+"cancel" = "Скасувати";
+"add" = "Додати";
 
 "by_days" = "По днях";
 "top_category" = "Найбільша категорія";

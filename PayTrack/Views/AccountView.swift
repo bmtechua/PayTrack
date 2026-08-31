@@ -3,7 +3,8 @@ import Supabase
 
 struct AccountView: View {
 
-    @ObservedObject private var authService = AuthService.shared
+    @ObservedObject
+    private var authService = AuthService.shared
 
     @State private var email = ""
     @State private var password = ""
@@ -22,7 +23,7 @@ struct AccountView: View {
                 authenticationView
             }
         }
-        .navigationTitle("Акаунт")
+        .navigationTitle("account")
         .task {
             await authService.loadCurrentUser()
         }
@@ -34,14 +35,14 @@ struct AccountView: View {
 
         Form {
 
-            Section("Акаунт") {
+            Section("account") {
 
                 Text(user.email ?? "")
             }
 
             Section {
 
-                Button("Вийти", role: .destructive) {
+                Button("sign_out", role: .destructive) {
 
                     Task {
                         await signOut()
@@ -69,20 +70,29 @@ struct AccountView: View {
 
             Section {
 
-                TextField("Email", text: $email)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    .autocorrectionDisabled()
+                TextField(
+                    "email",
+                    text: $email
+                )
+                .textInputAutocapitalization(.never)
+                .keyboardType(.emailAddress)
+                .autocorrectionDisabled()
 
                 HStack {
 
                     if isPasswordVisible {
 
-                        TextField("Password", text: $password)
+                        TextField(
+                            "password",
+                            text: $password
+                        )
 
                     } else {
 
-                        SecureField("Password", text: $password)
+                        SecureField(
+                            "password",
+                            text: $password
+                        )
                     }
 
                     Button {
@@ -92,9 +102,10 @@ struct AccountView: View {
                     } label: {
 
                         Image(
-                            systemName: isPasswordVisible
-                            ? "eye.slash"
-                            : "eye"
+                            systemName:
+                                isPasswordVisible
+                                ? "eye.slash"
+                                : "eye"
                         )
                         .foregroundStyle(.secondary)
                     }
@@ -120,8 +131,8 @@ struct AccountView: View {
 
                         Text(
                             isRegistering
-                            ? "Зареєструватися"
-                            : "Увійти"
+                            ? "register"
+                            : "sign_in"
                         )
                     }
                 }
@@ -143,8 +154,8 @@ struct AccountView: View {
 
                     Text(
                         isRegistering
-                        ? "Вже маєте акаунт? Увійти"
-                        : "Створити акаунт"
+                        ? "already_have_account_sign_in"
+                        : "create_account"
                     )
                 }
             }
@@ -211,3 +222,4 @@ struct AccountView: View {
         isLoading = false
     }
 }
+

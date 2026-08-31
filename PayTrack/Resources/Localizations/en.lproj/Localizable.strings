@@ -5,6 +5,15 @@
 //  Created by bmtech on 30.06.2026.
 //
 
+"account" = "Account";
+"email" = "Email";
+"password" = "Password";
+"sign_in" = "Sign In";
+"sign_out" = "Sign Out";
+"register" = "Register";
+"create_account" = "Create Account";
+"already_have_account_sign_in" = "Already have an account? Sign In";
+
 "theme_system" = "System";
 "theme_light" = "Light";
 "theme_dark" = "Dark";
@@ -38,6 +47,10 @@
 "no_category" = "No category";
 "new_category" = "New category";
 "create_category_first" = "Create a category first";
+"add_category" = "Add Category";
+"category_name" = "Category Name";
+"cancel" = "Cancel";
+"add" = "Add";
 
 "by_days" = "By days";
 "top_category" = "Top category";
