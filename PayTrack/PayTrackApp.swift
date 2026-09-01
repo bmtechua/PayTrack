@@ -6,9 +6,6 @@ import Supabase
 struct PayTrackApp: App {
 
     let persistenceController = PersistenceController.shared
-    
-    @AppStorage("hasShownWelcome")
-    private var hasShownWelcome = false
 
     @AppStorage("theme")
     private var theme = "Система"
@@ -21,9 +18,11 @@ struct PayTrackApp: App {
     }
 
     var body: some Scene {
+
         WindowGroup {
 
-            StartupView()
+            RootView()
+
                 .environment(
                     \.managedObjectContext,
                     persistenceController.container.viewContext
@@ -34,12 +33,10 @@ struct PayTrackApp: App {
                 )
                 .id(language)
                 .preferredColorScheme(selectedScheme())
-                .task {
-                    AuthService.shared.startAuthStateListener()
-                    await AuthService.shared.loadCurrentUser()
-                }
-                .onOpenURL { url in
 
+                
+
+                .onOpenURL { url in
                     AppLogger.shared.info(
                         "Auth deep link received: \(url.absoluteString)"
                     )
@@ -47,11 +44,11 @@ struct PayTrackApp: App {
                     if url.scheme == "paytrack",
                        url.host == "reset-password" {
 
+                        AuthService.shared.isPasswordRecovery = true
+
                         AppLogger.shared.info(
                             "Password reset deep link detected"
                         )
-
-                        AuthService.shared.isPasswordRecovery = true
 
                         AppLogger.shared.info(
                             "isPasswordRecovery set to true"

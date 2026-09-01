@@ -49,6 +49,7 @@ struct MainTabView: View {
                     )
                 }
         }
+
         .sheet(
             isPresented: $authService.isPasswordRecovery
         ) {

@@ -2,13 +2,6 @@
 //  LoadingView.swift
 //  PayTrack
 //
-//  Created by bmtech on 01.09.2026.
-//
-
-//
-//  LoadingView.swift
-//  PayTrack
-//
 
 import SwiftUI
 

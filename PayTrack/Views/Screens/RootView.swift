@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct StartupView: View {
+struct RootView: View {
 
     @AppStorage("hasShownWelcome")
     private var hasShownWelcome = false
@@ -39,7 +39,6 @@ struct StartupView: View {
 
     private func startApp() async {
 
-        // First launch
         if !hasShownWelcome {
 
             phase = .welcome
@@ -51,24 +50,16 @@ struct StartupView: View {
             hasShownWelcome = true
         }
 
-        // Real loading / synchronization
         phase = .loading
 
-        AuthService.shared.startAuthStateListener()
+        try? await Task.sleep(
+            for: .seconds(2)
+        )
 
-        await AuthService.shared.loadCurrentUser()
-
-        // Authenticated user
-        if AuthService.shared.user != nil {
-
-            await SyncService.shared.syncAll()
-        }
-
-        // Guest or authenticated user after sync
         phase = .main
     }
 }
 
 #Preview {
-    StartupView()
+    RootView()
 }

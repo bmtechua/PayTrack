@@ -196,7 +196,7 @@ extension SyncService {
                 try await downloadRemoteExpenses(for: userID)
 
             // Remove local expenses
-            
+
             try removeLocalExpenses()
 
             // Get categories for relationships
@@ -213,14 +213,10 @@ extension SyncService {
                 guard
                     case let .string(idString) =
                         remoteExpense["id"],
-
                     let expenseID =
                         UUID(uuidString: idString)
-
                 else {
-
                     continue
-
                 }
 
                 let expense = Expense(context: context)
@@ -231,58 +227,48 @@ extension SyncService {
                     remoteExpense["title"] {
 
                     expense.title = value
-
                 }
 
                 if case let .double(value) =
                     remoteExpense["amount"] {
 
                     expense.amount = value
-
                 }
 
                 if case let .string(value) =
                     remoteExpense["date"],
-
                     let date =
                         dateFormatter.date(from: value) {
 
                     expense.date = date
-
                 }
 
                 if case let .string(value) =
                     remoteExpense["merchant_name"] {
 
                     expense.merchantName = value
-
                 }
 
                 if case let .string(value) =
                     remoteExpense["source"] {
 
                     expense.source = value
-
                 }
 
                 if case let .string(value) =
                     remoteExpense["transaction_id"] {
 
                     expense.transactionID = value
-
                 }
 
                 if case let .string(categoryIDString) =
                     remoteExpense["category_id"],
-
                     let categoryID =
                         UUID(uuidString: categoryIDString) {
 
                     expense.category =
                         categoriesByID[categoryID]
-
                 }
-
             }
 
             try context.save()
@@ -293,12 +279,11 @@ extension SyncService {
 
         } catch {
 
+
             AppLogger.shared.error(
                 "Full sync failed: \(error.localizedDescription)"
             )
-
         }
-
     }
 
 }
