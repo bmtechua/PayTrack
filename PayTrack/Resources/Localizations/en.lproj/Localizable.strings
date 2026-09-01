@@ -99,7 +99,11 @@
 "ok" = "OK";
 "done" = "Done";
 
-
 "about" = "About";
 "version" = "Version";
 "app_name" = "App";
+
+"welcome_tagline" = "Manage your finances with ease";
+"company_name" = "bmtechua";
+
+"loading" = "Loading...";

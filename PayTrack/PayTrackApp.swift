@@ -6,6 +6,9 @@ import Supabase
 struct PayTrackApp: App {
 
     let persistenceController = PersistenceController.shared
+    
+    @AppStorage("hasShownWelcome")
+    private var hasShownWelcome = false
 
     @AppStorage("theme")
     private var theme = "Система"
@@ -20,7 +23,7 @@ struct PayTrackApp: App {
     var body: some Scene {
         WindowGroup {
 
-            MainTabView()
+            StartupView()
                 .environment(
                     \.managedObjectContext,
                     persistenceController.container.viewContext
