@@ -1,8 +1,3 @@
-//
-//  LoadingView.swift
-//  PayTrack
-//
-
 import SwiftUI
 
 struct LoadingView: View {
@@ -26,7 +21,7 @@ struct LoadingView: View {
                 ProgressView()
                     .controlSize(.large)
 
-                Text("loading")
+                Text("syncing")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

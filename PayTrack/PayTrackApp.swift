@@ -27,16 +27,18 @@ struct PayTrackApp: App {
                     \.managedObjectContext,
                     persistenceController.container.viewContext
                 )
+
                 .environment(
                     \.locale,
                     Locale(identifier: language)
                 )
+
                 .id(language)
+
                 .preferredColorScheme(selectedScheme())
 
-                
-
                 .onOpenURL { url in
+
                     AppLogger.shared.info(
                         "Auth deep link received: \(url.absoluteString)"
                     )

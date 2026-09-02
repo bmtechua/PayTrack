@@ -54,17 +54,27 @@ struct StartupView: View {
         // Real loading / synchronization
         phase = .loading
 
+        let loadingStart = ContinuousClock.now
+
+        await Task.yield()
+
         AuthService.shared.startAuthStateListener()
 
         await AuthService.shared.loadCurrentUser()
 
-        // Authenticated user
         if AuthService.shared.user != nil {
-
             await SyncService.shared.syncAll()
         }
 
-        // Guest or authenticated user after sync
+        let elapsed = loadingStart.duration(to: .now)
+        let minimumDuration: Duration = .milliseconds(500)
+
+        if elapsed < minimumDuration {
+            try? await Task.sleep(
+                for: minimumDuration - elapsed
+            )
+        }
+
         phase = .main
     }
 }

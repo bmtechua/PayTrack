@@ -39,6 +39,7 @@ struct RootView: View {
 
     private func startApp() async {
 
+        // First launch
         if !hasShownWelcome {
 
             phase = .welcome
@@ -50,12 +51,21 @@ struct RootView: View {
             hasShownWelcome = true
         }
 
+        // Real startup / synchronization
         phase = .loading
 
-        try? await Task.sleep(
-            for: .seconds(2)
-        )
+        AuthService.shared.startAuthStateListener()
 
+        await AuthService.shared.loadCurrentUser()
+
+        // If a user is already authenticated,
+        // perform the real full synchronization.
+        if AuthService.shared.user != nil {
+
+            await SyncService.shared.syncAll()
+        }
+
+        // Application is ready
         phase = .main
     }
 }
