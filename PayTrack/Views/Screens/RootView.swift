@@ -1,12 +1,13 @@
 import SwiftUI
+import CoreData
 
 struct RootView: View {
 
-    @AppStorage("hasShownWelcome")
-    private var hasShownWelcome = false
+    @State
+    private var phase: Phase = .welcome
 
     @State
-    private var phase: Phase = .loading
+    private var persistenceController: PersistenceController?
 
     private enum Phase {
         case welcome
@@ -27,7 +28,19 @@ struct RootView: View {
                 LoadingView()
 
             case .main:
-                MainTabView()
+
+                if let persistenceController {
+
+                    MainTabView()
+                        .environment(
+                            \.managedObjectContext,
+                            persistenceController.container.viewContext
+                        )
+
+                } else {
+
+                    LoadingView()
+                }
             }
         }
         .task {
@@ -39,33 +52,45 @@ struct RootView: View {
 
     private func startApp() async {
 
-        // First launch
-        if !hasShownWelcome {
+        // MARK: - Welcome
 
-            phase = .welcome
+        // WelcomeView is shown immediately
+        // when the application process starts.
 
-            try? await Task.sleep(
-                for: .seconds(2)
-            )
+        try? await Task.sleep(
+            for: .seconds(1)
+        )
 
-            hasShownWelcome = true
-        }
+        // MARK: - Loading
 
-        // Real startup / synchronization
         phase = .loading
+
+        // Create Core Data only after WelcomeView.
+        // This prevents the white screen caused by
+        // PersistenceController.shared being created
+        // before the first SwiftUI screen appears.
+
+        persistenceController =
+            PersistenceController.shared
+
+        // Artificial loading delay
+
+        try? await Task.sleep(
+            for: .seconds(1)
+        )
+
+        // MARK: - Real startup
 
         AuthService.shared.startAuthStateListener()
 
         await AuthService.shared.loadCurrentUser()
 
-        // If a user is already authenticated,
-        // perform the real full synchronization.
         if AuthService.shared.user != nil {
-
             await SyncService.shared.syncAll()
         }
 
-        // Application is ready
+        // MARK: - Application ready
+
         phase = .main
     }
 }

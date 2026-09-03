@@ -1,11 +1,8 @@
 import SwiftUI
-import CoreData
 import Supabase
 
 @main
 struct PayTrackApp: App {
-
-    let persistenceController = PersistenceController.shared
 
     @AppStorage("theme")
     private var theme = "Система"
@@ -22,21 +19,12 @@ struct PayTrackApp: App {
         WindowGroup {
 
             RootView()
-
-                .environment(
-                    \.managedObjectContext,
-                    persistenceController.container.viewContext
-                )
-
                 .environment(
                     \.locale,
                     Locale(identifier: language)
                 )
-
                 .id(language)
-
                 .preferredColorScheme(selectedScheme())
-
                 .onOpenURL { url in
 
                     AppLogger.shared.info(
