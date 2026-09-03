@@ -48,6 +48,7 @@
 "all_expenses" = "Toutes les dépenses";
 "expense_name" = "Nom";
 "new_expense" = "Nouvelle dépense";
+"edit_expense" = "Modifier la dépense";
 
 "budget" = "Budget";
 "budget_exceeded" = "⚠️ Vous avez dépassé votre budget !";

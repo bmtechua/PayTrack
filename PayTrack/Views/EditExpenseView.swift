@@ -2,8 +2,6 @@
 //  EditExpenseView.swift
 //  PayTrack
 //
-//  Created by bmtech on 27.08.2026.
-//
 
 import SwiftUI
 import CoreData
@@ -11,10 +9,14 @@ import Supabase
 
 struct EditExpenseView: View {
 
-    @Environment(\.managedObjectContext) private var context
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.managedObjectContext)
+    private var context
 
-    @ObservedObject var expense: Expense
+    @Environment(\.dismiss)
+    private var dismiss
+
+    @ObservedObject
+    var expense: Expense
 
     @FetchRequest(
         sortDescriptors: [
@@ -26,16 +28,25 @@ struct EditExpenseView: View {
     )
     private var categories: FetchedResults<Category>
 
-    @State private var title = ""
-    @State private var amount = ""
-    @State private var date = Date()
-    @State private var selectedCategory: Category?
+    @State
+    private var title = ""
+
+    @State
+    private var amount = ""
+
+    @State
+    private var date = Date()
+
+    @State
+    private var selectedCategoryID: UUID?
 
     var body: some View {
 
         NavigationStack {
 
             Form {
+
+                // MARK: - Expense
 
                 Section("expense") {
 
@@ -57,6 +68,8 @@ struct EditExpenseView: View {
                     )
                 }
 
+                // MARK: - Category
+
                 Section("category") {
 
                     if categories.isEmpty {
@@ -68,26 +81,31 @@ struct EditExpenseView: View {
 
                         Picker(
                             "category",
-                            selection: $selectedCategory
+                            selection: $selectedCategoryID
                         ) {
 
                             Text("no_category")
-                                .tag(Category?.none)
+                                .tag(UUID?.none)
 
                             ForEach(categories) { category in
 
-                                Text(
-                                    LocalizedStringKey(
-                                        category.name ?? ""
+                                if let categoryID = category.id {
+
+                                    Text(
+                                        LocalizedStringKey(
+                                            category.name ?? ""
+                                        )
                                     )
-                                )
-                                .tag(
-                                    Category?.some(category)
-                                )
+                                    .tag(
+                                        UUID?.some(categoryID)
+                                    )
+                                }
                             }
                         }
                     }
                 }
+
+                // MARK: - Save
 
                 Button {
 
@@ -103,12 +121,20 @@ struct EditExpenseView: View {
             .onAppear {
 
                 title = expense.title ?? ""
-                amount = String(expense.amount)
+
+                amount = String(
+                    expense.amount
+                )
+
                 date = expense.date ?? Date()
-                selectedCategory = expense.category
+
+                selectedCategoryID =
+                    expense.category?.id
             }
         }
     }
+
+    // MARK: - Save changes
 
     private func saveChanges() {
 
@@ -122,7 +148,26 @@ struct EditExpenseView: View {
         expense.title = title
         expense.amount = value
         expense.date = date
-        expense.category = selectedCategory
+
+        if let categoryID = selectedCategoryID {
+
+            let request: NSFetchRequest<Category> =
+                Category.fetchRequest()
+
+            request.fetchLimit = 1
+
+            request.predicate = NSPredicate(
+                format: "id == %@",
+                categoryID as CVarArg
+            )
+
+            expense.category =
+                try? context.fetch(request).first
+
+        } else {
+
+            expense.category = nil
+        }
 
         do {
 
@@ -136,13 +181,16 @@ struct EditExpenseView: View {
 
                 do {
 
-                    _ = try await SupabaseManager.shared.client.auth.session
+                    _ = try await
+                        SupabaseManager.shared.client.auth.session
 
                     AppLogger.shared.info(
                         "Auto update sync started"
                     )
 
-                    await SyncService.shared.syncOneExpense(expense)
+                    await SyncService.shared.syncOneExpense(
+                        expense
+                    )
 
                 } catch {
 

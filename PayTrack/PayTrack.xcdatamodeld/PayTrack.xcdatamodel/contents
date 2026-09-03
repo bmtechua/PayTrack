@@ -6,7 +6,7 @@
         <attribute name="is_default" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
         <attribute name="name" optional="YES" attributeType="String"/>
         <attribute name="userID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
-        <relationship name="expenses" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Expense" inverseName="category" inverseEntity="Expense"/>
+        <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Expense" inverseName="category" inverseEntity="Expense"/>
     </entity>
     <entity name="Expense" representedClassName="Expense" syncable="YES" codeGenerationType="class">
         <attribute name="amount" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>

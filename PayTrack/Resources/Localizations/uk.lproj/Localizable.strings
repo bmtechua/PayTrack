@@ -48,6 +48,7 @@
 "all_expenses" = "Всі витрати";
 "expense_name" = "Назва";
 "new_expense" = "Нова витрата";
+"edit_expense" = "Редагування витрати";
 
 "budget" = "Бюджет";
 "budget_exceeded" = "⚠️ Ви перевищили бюджет!";
