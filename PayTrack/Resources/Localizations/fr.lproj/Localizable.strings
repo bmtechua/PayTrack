@@ -87,6 +87,8 @@
 "currency_uah" = "₴ Hryvnia ukrainienne";
 "currency_eur" = "€ Euro";
 "currency_usd" = "$ Dollar américain";
+"currency_cad" = "CA$ Canadian Dollar";
+"currency_aud" = "AUD Dollar australien";
 
 "app_log" = "Journal de l’application";
 "log_title" = "Journal de l’application";

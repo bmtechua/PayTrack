@@ -132,6 +132,8 @@ struct ExpensesListView: View {
 // MARK: - Expense Row
 
 private struct ExpenseRowView: View {
+    
+    @AppStorage("currency") private var currency = "UAH"
 
     @ObservedObject
     var expense: Expense
@@ -155,10 +157,9 @@ private struct ExpenseRowView: View {
                     )
 
                     Text(
-                        expense.category?.name
-                        ?? NSLocalizedString(
-                            "no_category",
-                            comment: ""
+                        LocalizedStringKey(
+                            expense.category?.name
+                            ?? "no_category"
                         )
                     )
                     .font(.subheadline)
@@ -177,11 +178,11 @@ private struct ExpenseRowView: View {
 
             Text(
                 String(
-                    format: "%.2f грн",
-                    expense.amount
+                    format: "%.2f %@",
+                    expense.amount,
+                    currency
                 )
-            )
-            .fontWeight(.bold)
+            )            .fontWeight(.bold)
         }
     }
 }

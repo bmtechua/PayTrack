@@ -10,15 +10,23 @@ import Foundation
 func formatAmount(_ amount: Double, currency: String) -> String {
 
     switch currency {
+
     case "EUR":
         return String(format: "%.2f €", amount)
 
     case "USD":
         return String(format: "%.2f $", amount)
 
+    case "AUD":
+        return String(format: "%.2f A$", amount)
+
+    case "CAD":
+        return String(format: "%.2f C$", amount)
+
     default:
         return String(format: "%.2f ₴", amount)
     }
 }
+
 
 

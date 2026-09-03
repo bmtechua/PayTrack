@@ -87,6 +87,8 @@
 "currency_uah" = "₴ Гривня";
 "currency_eur" = "€ Євро";
 "currency_usd" = "$ Долар";
+"currency_cad" = "CA$ Канадський долар";
+"currency_aud" = "AUD Австралійський долар";
 
 "app_log" = "Лог програми";
 "log_title" = "Лог програми";

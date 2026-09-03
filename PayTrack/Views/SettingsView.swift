@@ -105,6 +105,11 @@ struct SettingsView: View {
 
                         Text("currency_usd")
                             .tag("USD")
+                        
+                        Text("currency_cad")
+                                    .tag("CAD")
+                        Text("currency_aud")
+                            .tag("AUD")
                     }
                 }
 
