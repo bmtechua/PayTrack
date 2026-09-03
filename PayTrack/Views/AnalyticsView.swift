@@ -8,6 +8,7 @@
 import SwiftUI
 import CoreData
 import Charts
+import Auth
 
 
 struct AnalyticsView: View {
@@ -17,6 +18,9 @@ struct AnalyticsView: View {
     
     @AppStorage("currency")
     private var currency = "UAH"
+    
+    @ObservedObject
+    private var authService = AuthService.shared
     
     @FetchRequest(
         sortDescriptors: [
@@ -286,32 +290,32 @@ struct AnalyticsView: View {
     // MARK: - FILTER
 
 
-    private func filteredExpenses()
-    -> [Expense] {
+    private func filteredExpenses() -> [Expense] {
 
+        let calendar = Calendar.current
 
-        let calendar =
-        Calendar.current
+        return expenses.filter { expense in
 
+            if let userID = authService.user?.id {
+                guard expense.userID == userID else {
+                    return false
+                }
+            } else {
+                guard expense.userID == nil else {
+                    return false
+                }
+            }
 
-        return expenses.filter {
-
-
-            guard let date =
-                    $0.date
-            else {
+            guard let date = expense.date else {
                 return false
             }
 
-
             return calendar.isDate(
                 date,
-                equalTo:selectedMonth,
-                toGranularity:.month
+                equalTo: selectedMonth,
+                toGranularity: .month
             )
-
         }
-
     }
 
 

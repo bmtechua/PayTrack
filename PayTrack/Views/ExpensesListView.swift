@@ -12,6 +12,9 @@ struct ExpensesListView: View {
     @Environment(\.managedObjectContext)
     private var context
 
+    @ObservedObject
+    private var authService = AuthService.shared
+
     @FetchRequest(
         sortDescriptors: [
             NSSortDescriptor(
@@ -26,16 +29,34 @@ struct ExpensesListView: View {
     @State
     private var selectedExpense: Expense?
 
+    private var visibleExpenses: [Expense] {
+        guard let userID = authService.user?.id else {
+            // Free mode:
+            // show only expenses without Premium owner
+            return expenses.filter {
+                $0.userID == nil
+            }
+        }
+
+        // Premium mode:
+        // show only expenses belonging to current user
+        return expenses.filter {
+            $0.userID == userID
+        }
+    }
+
     var body: some View {
 
         NavigationStack {
 
             List {
 
-                ForEach(expenses) { expense in
+                ForEach(visibleExpenses) { expense in
 
                     Button {
+
                         selectedExpense = expense
+
                     } label: {
 
                         ExpenseRowView(
@@ -44,11 +65,14 @@ struct ExpensesListView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
                 .onDelete(
                     perform: deleteExpense
                 )
             }
+
             .navigationTitle("all_expenses")
+
             .sheet(item: $selectedExpense) { expense in
 
                 EditExpenseView(
@@ -70,7 +94,7 @@ struct ExpensesListView: View {
 
             for index in offsets {
 
-                let expense = expenses[index]
+                let expense = visibleExpenses[index]
 
                 guard let expenseID = expense.id else {
 
@@ -88,27 +112,34 @@ struct ExpensesListView: View {
                     "Expense deleted: \(expenseTitle), amount: \(expense.amount)"
                 )
 
-                Task {
+                // Sync only Premium expenses.
+                // Free expenses stay local.
+                if expense.userID != nil {
 
-                    do {
+                    Task {
 
-                        _ = try await
-                            SupabaseManager.shared.client.auth.session
+                        do {
 
-                        AppLogger.shared.info(
-                            "Auto delete sync started"
-                        )
+                            _ = try await
+                                SupabaseManager.shared.client
+                                .auth
+                                .session
 
-                        await SyncService.shared.deleteExpense(
-                            id: expenseID,
-                            title: expenseTitle
-                        )
+                            AppLogger.shared.info(
+                                "Auto delete sync started"
+                            )
 
-                    } catch {
+                            await SyncService.shared.deleteExpense(
+                                id: expenseID,
+                                title: expenseTitle
+                            )
 
-                        AppLogger.shared.info(
-                            "Auto delete sync skipped: no authenticated user"
-                        )
+                        } catch {
+
+                            AppLogger.shared.info(
+                                "Auto delete sync skipped: no authenticated user"
+                            )
+                        }
                     }
                 }
 
@@ -132,8 +163,9 @@ struct ExpensesListView: View {
 // MARK: - Expense Row
 
 private struct ExpenseRowView: View {
-    
-    @AppStorage("currency") private var currency = "UAH"
+
+    @AppStorage("currency")
+    private var currency = "UAH"
 
     @ObservedObject
     var expense: Expense
@@ -182,7 +214,8 @@ private struct ExpenseRowView: View {
                     expense.amount,
                     currency
                 )
-            )            .fontWeight(.bold)
+            )
+            .fontWeight(.bold)
         }
     }
 }

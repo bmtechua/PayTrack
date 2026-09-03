@@ -21,7 +21,9 @@ struct PersistenceController {
 
     init(inMemory: Bool = false) {
 
-        let container = NSPersistentContainer(name: "PayTrack")
+        let container = NSPersistentContainer(
+            name: "PayTrack"
+        )
 
         if inMemory {
             container.persistentStoreDescriptions.first!.url =
@@ -33,14 +35,79 @@ struct PersistenceController {
         container.loadPersistentStores { storeDescription, error in
 
             if let error = error as NSError? {
-
                 fatalError(
                     "Unresolved error \(error), \(error.userInfo)"
                 )
             }
+
+            PersistenceController.createFreeDefaultCategories(
+                in: container.viewContext
+            )
         }
 
         container.viewContext.automaticallyMergesChangesFromParent = true
     }
 
+    // MARK: - Free default categories
+
+    private static func createFreeDefaultCategories(
+        in context: NSManagedObjectContext
+    ) {
+
+        let defaultCategories = [
+            ("Food", "🍔"),
+            ("House", "🏠"),
+            ("Relax", "🏖️"),
+            ("Transport", "🚗"),
+            ("Other", "📌")
+        ]
+
+        context.performAndWait {
+
+            do {
+
+                let request: NSFetchRequest<Category> =
+                    Category.fetchRequest()
+
+                request.predicate = NSPredicate(
+                    format: "userID == nil"
+                )
+
+                let existingCategories =
+                    try context.fetch(request)
+
+                for (name, icon) in defaultCategories {
+
+                    let exists =
+                        existingCategories.contains {
+                            $0.name == name
+                        }
+
+                    if exists {
+                        continue
+                    }
+
+                    let category = Category(
+                        context: context
+                    )
+
+                    category.id = UUID()
+                    category.name = name
+                    category.icon = icon
+                    category.is_default = true
+                    category.userID = nil
+                }
+
+                if context.hasChanges {
+                    try context.save()
+                }
+
+            } catch {
+
+                AppLogger.shared.error(
+                    "Failed to create Free default categories: \(error.localizedDescription)"
+                )
+            }
+        }
+    }
 }

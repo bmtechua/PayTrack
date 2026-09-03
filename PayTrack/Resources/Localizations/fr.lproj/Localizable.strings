@@ -64,6 +64,7 @@
 "new_category" = "Nouvelle catégorie";
 "create_category_first" = "Créez d'abord une catégorie";
 "add_category" = "Ajouter une catégorie";
+"edit_category" = "Modifier la catégorie";
 "category_name" = "Nom de la catégorie";
 "cancel" = "Annuler";
 "add" = "Ajouter";

@@ -64,6 +64,7 @@
 "new_category" = "New category";
 "create_category_first" = "Create a category first";
 "add_category" = "Add Category";
+"edit_category" = "Edit Category";
 "category_name" = "Category Name";
 "cancel" = "Cancel";
 "add" = "Add";
@@ -76,6 +77,7 @@
 "category" = "Category";
 "day" = "Day";
 "date" = "Date";
+
 
 "save" = "Save";
 

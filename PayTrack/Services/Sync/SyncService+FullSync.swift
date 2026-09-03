@@ -2,73 +2,25 @@
 //  SyncService+FullSync.swift
 //  PayTrack
 //
-//  Created by bmtech on 29.08.2026.
-//
 
 import Foundation
 import CoreData
 import Supabase
 
 extension SyncService {
-    
+
+    // MARK: - Current user
+
     private func currentUserID() async throws -> UUID {
-            let user = try await client.auth.session.user
-            return user.id
-        }
-    
-    private func uploadLocalCategories(for userID: UUID) async throws {
-        let request: NSFetchRequest<Category> = Category.fetchRequest()
 
-        request.predicate = NSPredicate(
-            format: "userID == %@",
-            userID as CVarArg
-        )
+        let user =
+            try await client.auth.session.user
 
-        let categories = try context.fetch(request)
-
-        for category in categories {
-            await syncOneCategory(category)
-        }
+        return user.id
     }
-    
-    private func removeLocalCategories(for userID: UUID) throws {
-        let request: NSFetchRequest<Category> =
-            Category.fetchRequest()
 
-        request.predicate = NSPredicate(
-            format: "userID == %@",
-            userID as CVarArg
-        )
+    // MARK: - Download remote categories
 
-        let categories = try context.fetch(request)
-
-        for category in categories {
-            context.delete(category)
-        }
-    }
-    
-    private func uploadLocalExpenses() async throws {
-        let request: NSFetchRequest<Expense> =
-            Expense.fetchRequest()
-
-        let expenses = try context.fetch(request)
-
-        for expense in expenses {
-            await syncOneExpense(expense)
-        }
-    }
-    
-    private func removeLocalExpenses() throws {
-        let request: NSFetchRequest<Expense> =
-            Expense.fetchRequest()
-
-        let expenses = try context.fetch(request)
-
-        for expense in expenses {
-            context.delete(expense)
-        }
-    }
-    
     private func downloadRemoteCategories(
         for userID: UUID
     ) async throws -> [[String: AnyJSON]] {
@@ -83,42 +35,9 @@ extension SyncService {
             .execute()
             .value
     }
-    
-    private func saveRemoteCategories(
-        _ remoteCategories: [[String: AnyJSON]],
-        for userID: UUID
-    ) throws {
 
-        for remoteCategory in remoteCategories {
+    // MARK: - Download remote expenses
 
-            guard
-                case let .string(idString) = remoteCategory["id"],
-                let categoryID = UUID(uuidString: idString)
-            else {
-                continue
-            }
-
-            let category = Category(context: context)
-
-            category.id = categoryID
-            category.userID = userID
-
-            if case let .string(value) = remoteCategory["name"] {
-                category.name = value
-            }
-
-            if case let .string(value) = remoteCategory["icon"] {
-                category.icon = value
-            }
-
-            if case let .bool(value) = remoteCategory["is_default"] {
-                category.is_default = value
-            }
-        }
-
-        try context.save()
-    }
-    
     private func downloadRemoteExpenses(
         for userID: UUID
     ) async throws -> [[String: AnyJSON]] {
@@ -133,166 +52,731 @@ extension SyncService {
             .execute()
             .value
     }
-    
+
+    // MARK: - Merge remote category
+
+    private func mergeRemoteCategory(
+        _ remoteCategory: [String: AnyJSON],
+        userID: UUID
+    ) throws -> Category? {
+
+        guard
+            case let .string(idString) =
+                remoteCategory["id"],
+            let categoryID =
+                UUID(uuidString: idString)
+        else {
+            return nil
+        }
+
+        let request:
+            NSFetchRequest<Category> =
+            Category.fetchRequest()
+
+        request.fetchLimit = 1
+
+        request.predicate =
+            NSPredicate(
+                format: "id == %@ AND userID == %@",
+                categoryID as CVarArg,
+                userID as CVarArg
+            )
+
+        let category: Category
+
+        if let existing =
+            try context.fetch(request).first {
+
+            category = existing
+
+        } else {
+
+            category =
+                Category(context: context)
+
+            category.id =
+                categoryID
+
+            category.userID =
+                userID
+        }
+
+        if case let .string(value) =
+            remoteCategory["name"] {
+
+            category.name =
+                value
+        }
+
+        if case let .string(value) =
+            remoteCategory["icon"] {
+
+            category.icon =
+                value
+        }
+
+        if case let .bool(value) =
+            remoteCategory["is_default"] {
+
+            category.is_default =
+                value
+        }
+
+        category.userID =
+            userID
+
+        return category
+    }
+
+    // MARK: - Merge remote expense
+
+    private func mergeRemoteExpense(
+        _ remoteExpense: [String: AnyJSON],
+        userID: UUID,
+        categoriesByID: [UUID: Category]
+    ) throws {
+
+        guard
+            case let .string(idString) =
+                remoteExpense["id"],
+            let expenseID =
+                UUID(uuidString: idString)
+        else {
+            return
+        }
+
+        let request:
+            NSFetchRequest<Expense> =
+            Expense.fetchRequest()
+
+        request.fetchLimit = 1
+
+        request.predicate =
+            NSPredicate(
+                format: "id == %@ AND userID == %@",
+                expenseID as CVarArg,
+                userID as CVarArg
+            )
+
+        let expense: Expense
+
+        if let existing =
+            try context.fetch(request).first {
+
+            expense = existing
+
+        } else {
+
+            expense =
+                Expense(context: context)
+
+            expense.id =
+                expenseID
+
+            expense.userID =
+                userID
+        }
+
+        if case let .string(value) =
+            remoteExpense["title"] {
+
+            expense.title =
+                value
+        }
+
+        if let amount =
+            remoteExpense["amount"] {
+
+            switch amount {
+
+            case .double(let value):
+
+                expense.amount =
+                    value
+
+            case .integer(let value):
+
+                expense.amount =
+                    Double(value)
+
+            default:
+                break
+            }
+        }
+
+        if case let .string(value) =
+            remoteExpense["date"] {
+
+            let formatter =
+                ISO8601DateFormatter()
+
+            if let date =
+                formatter.date(from: value) {
+
+                expense.date =
+                    date
+            }
+        }
+
+        if case let .string(value) =
+            remoteExpense["merchant_name"] {
+
+            expense.merchantName =
+                value
+        }
+
+        if case let .string(value) =
+            remoteExpense["source"] {
+
+            expense.source =
+                value
+        }
+
+        if case let .string(value) =
+            remoteExpense["transaction_id"] {
+
+            expense.transactionID =
+                value
+        }
+
+        if case let .string(categoryIDString) =
+            remoteExpense["category_id"],
+           let categoryID =
+            UUID(uuidString: categoryIDString) {
+
+            expense.category =
+                categoriesByID[categoryID]
+
+        } else {
+
+            expense.category =
+                nil
+        }
+
+        expense.userID =
+            userID
+    }
+
+    // MARK: - Migrate Free categories
+
+    private func migrateFreeCategories(
+        to userID: UUID
+    ) throws {
+
+        let freeRequest:
+            NSFetchRequest<Category> =
+            Category.fetchRequest()
+
+        freeRequest.predicate =
+            NSPredicate(
+                format: "userID == nil"
+            )
+
+        let freeCategories =
+            try context.fetch(freeRequest)
+
+        guard
+            !freeCategories.isEmpty
+        else {
+            return
+        }
+
+        let premiumRequest:
+            NSFetchRequest<Category> =
+            Category.fetchRequest()
+
+        premiumRequest.predicate =
+            NSPredicate(
+                format: "userID == %@",
+                userID as CVarArg
+            )
+
+        let premiumCategories =
+            try context.fetch(
+                premiumRequest
+            )
+
+        for freeCategory
+        in freeCategories {
+
+            guard
+                let freeName =
+                    freeCategory.name?
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    ),
+                !freeName.isEmpty
+            else {
+
+                freeCategory.userID =
+                    userID
+
+                continue
+            }
+
+            // Find existing Premium category
+            // with the same name.
+            if let premiumCategory =
+                premiumCategories.first(
+                    where: {
+
+                        guard
+                            let premiumName =
+                                $0.name
+                        else {
+                            return false
+                        }
+
+                        return premiumName
+                            .trimmingCharacters(
+                                in: .whitespacesAndNewlines
+                            )
+                            .caseInsensitiveCompare(
+                                freeName
+                            ) == .orderedSame
+                    }
+                ) {
+
+                let expenseRequest:
+                    NSFetchRequest<Expense> =
+                    Expense.fetchRequest()
+
+                expenseRequest.predicate =
+                    NSPredicate(
+                        format: "category == %@",
+                        freeCategory
+                    )
+
+                let expenses =
+                    try context.fetch(
+                        expenseRequest
+                    )
+
+                for expense
+                in expenses {
+
+                    expense.category =
+                        premiumCategory
+
+                    expense.userID =
+                        userID
+                }
+
+                context.delete(
+                    freeCategory
+                )
+
+            } else {
+
+                // No matching Premium category.
+                // Promote the Free category.
+                freeCategory.userID =
+                    userID
+            }
+        }
+
+        try context.save()
+
+        AppLogger.shared.info(
+            "Free categories migrated to Premium user: \(userID)"
+        )
+    }
+
+    // MARK: - Migrate Free expenses
+
+    private func migrateFreeExpenses(
+        to userID: UUID
+    ) throws {
+
+        let request:
+            NSFetchRequest<Expense> =
+            Expense.fetchRequest()
+
+        request.predicate =
+            NSPredicate(
+                format: "userID == nil"
+            )
+
+        let freeExpenses =
+            try context.fetch(request)
+
+        guard
+            !freeExpenses.isEmpty
+        else {
+            return
+        }
+
+        for expense
+        in freeExpenses {
+
+            expense.userID =
+                userID
+        }
+
+        try context.save()
+
+        AppLogger.shared.info(
+            "Free expenses migrated to Premium user: \(userID)"
+        )
+    }
+
+    // MARK: - Remove duplicate local categories
+
+    private func removeDuplicateLocalCategories(
+        for userID: UUID
+    ) throws {
+
+        let request:
+            NSFetchRequest<Category> =
+            Category.fetchRequest()
+
+        request.predicate =
+            NSPredicate(
+                format: "userID == %@",
+                userID as CVarArg
+            )
+
+        request.sortDescriptors = [
+            NSSortDescriptor(
+                key: "name",
+                ascending: true
+            )
+        ]
+
+        let categories =
+            try context.fetch(request)
+
+        let grouped =
+            Dictionary(
+                grouping: categories
+            ) {
+
+                ($0.name ?? "")
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )
+                    .lowercased()
+            }
+
+        for (_, duplicates)
+        in grouped {
+
+            guard
+                duplicates.count > 1
+            else {
+                continue
+            }
+
+            // Prefer:
+            // 1. default category
+            // 2. category with a real icon
+            // 3. stable ID
+
+            let primary =
+                duplicates
+                    .sorted { first, second in
+
+                        if first.is_default !=
+                            second.is_default {
+
+                            return first.is_default
+                        }
+
+                        let firstIcon =
+                            first.icon ?? ""
+
+                        let secondIcon =
+                            second.icon ?? ""
+
+                        if firstIcon == "📌",
+                           secondIcon != "📌" {
+
+                            return false
+                        }
+
+                        if firstIcon != "📌",
+                           secondIcon == "📌" {
+
+                            return true
+                        }
+
+                        return (
+                            first.id?
+                                .uuidString
+                            ?? ""
+                        ) < (
+                            second.id?
+                                .uuidString
+                            ?? ""
+                        )
+                    }
+                    .first!
+
+            for duplicate
+            in duplicates
+            where duplicate !== primary {
+
+                let expenseRequest:
+                    NSFetchRequest<Expense> =
+                    Expense.fetchRequest()
+
+                expenseRequest.predicate =
+                    NSPredicate(
+                        format: "category == %@",
+                        duplicate
+                    )
+
+                let expenses =
+                    try context.fetch(
+                        expenseRequest
+                    )
+
+                for expense
+                in expenses {
+
+                    expense.category =
+                        primary
+
+                    expense.userID =
+                        userID
+                }
+
+                let duplicateName =
+                    duplicate.name
+                    ?? "No name"
+
+                context.delete(
+                    duplicate
+                )
+
+                AppLogger.shared.info(
+                    "Local duplicate removed: \(duplicateName)"
+                )
+            }
+        }
+
+        if context.hasChanges {
+
+            try context.save()
+        }
+
+        AppLogger.shared.info(
+            "Local duplicate category cleanup completed"
+        )
+    }
+
+    // MARK: - Upload local categories
+
+    private func uploadLocalCategories(
+        for userID: UUID
+    ) async throws {
+
+        let request:
+            NSFetchRequest<Category> =
+            Category.fetchRequest()
+
+        request.predicate =
+            NSPredicate(
+                format: "userID == %@",
+                userID as CVarArg
+            )
+
+        let categories =
+            try context.fetch(request)
+
+        for category
+        in categories {
+
+            await syncOneCategory(
+                category
+            )
+        }
+    }
+
+    // MARK: - Upload local expenses
+
+    private func uploadLocalExpenses(
+        for userID: UUID
+    ) async throws {
+
+        let request:
+            NSFetchRequest<Expense> =
+            Expense.fetchRequest()
+
+        request.predicate =
+            NSPredicate(
+                format: "userID == %@",
+                userID as CVarArg
+            )
+
+        let expenses =
+            try context.fetch(request)
+
+        for expense
+        in expenses {
+
+            await syncOneExpense(
+                expense
+            )
+        }
+    }
+
+    // MARK: - Local categories by ID
+
     private func localCategoriesByID(
         for userID: UUID
     ) throws -> [UUID: Category] {
 
-        let request: NSFetchRequest<Category> =
+        let request:
+            NSFetchRequest<Category> =
             Category.fetchRequest()
 
-        request.predicate = NSPredicate(
-            format: "userID == %@",
-            userID as CVarArg
-        )
+        request.predicate =
+            NSPredicate(
+                format: "userID == %@",
+                userID as CVarArg
+            )
 
-        let categories = try context.fetch(request)
+        let categories =
+            try context.fetch(request)
 
-        var categoriesByID: [UUID: Category] = [:]
+        var result:
+            [UUID: Category] =
+            [:]
 
-        for category in categories {
-            if let id = category.id {
-                categoriesByID[id] = category
+        for category
+        in categories {
+
+            if let id =
+                category.id {
+
+                result[id] =
+                    category
             }
         }
 
-        return categoriesByID
+        return result
     }
+
+    // MARK: - Full sync
 
     func syncAll() async {
 
         do {
 
-            let user = try await client.auth.session.user
-            let userID = user.id
+            let userID =
+                try await currentUserID()
 
-            // MARK: - Upload local categories
+            AppLogger.shared.info(
+                "Full sync started for user: \(userID)"
+            )
 
-            try await uploadLocalCategories(for: userID)
-
-            // MARK: - Upload local expenses
-
-            try await uploadLocalExpenses()
-
-            // MARK: - Categories from Supabase
+            // -------------------------------------------------
+            // 1. Download Premium categories FIRST.
+            // -------------------------------------------------
 
             let remoteCategories =
-                try await downloadRemoteCategories(for: userID)
+                try await downloadRemoteCategories(
+                    for: userID
+                )
 
-            // Remove local categories ONLY for current user
+            for remoteCategory
+            in remoteCategories {
 
-            try removeLocalCategories(for: userID)
+                _ = try mergeRemoteCategory(
+                    remoteCategory,
+                    userID: userID
+                )
+            }
 
-            // Create categories from Supabase
+            try context.save()
 
-            try saveRemoteCategories(
-                remoteCategories,
+            // -------------------------------------------------
+            // 2. Migrate Free categories.
+            // -------------------------------------------------
+
+            try migrateFreeCategories(
+                to: userID
+            )
+
+            // -------------------------------------------------
+            // 3. Migrate Free expenses.
+            // -------------------------------------------------
+
+            try migrateFreeExpenses(
+                to: userID
+            )
+
+            // -------------------------------------------------
+            // 4. IMPORTANT:
+            // Remove old local Premium duplicates
+            // BEFORE uploading anything.
+            // -------------------------------------------------
+
+            try removeDuplicateLocalCategories(
                 for: userID
             )
 
-            // MARK: - Expenses from Supabase
+            // -------------------------------------------------
+            // 5. Upload unique Premium categories.
+            // -------------------------------------------------
+
+            try await uploadLocalCategories(
+                for: userID
+            )
+
+            // -------------------------------------------------
+            // 6. Upload Premium expenses.
+            // -------------------------------------------------
+
+            try await uploadLocalExpenses(
+                for: userID
+            )
+
+            // -------------------------------------------------
+            // 7. Download Premium expenses.
+            // -------------------------------------------------
 
             let remoteExpenses =
-                try await downloadRemoteExpenses(for: userID)
+                try await downloadRemoteExpenses(
+                    for: userID
+                )
 
-            // Remove local expenses
-
-            try removeLocalExpenses()
-
-            // Get categories for relationships
+            // -------------------------------------------------
+            // 8. Build category map.
+            // -------------------------------------------------
 
             let categoriesByID =
-                try localCategoriesByID(for: userID)
+                try localCategoriesByID(
+                    for: userID
+                )
 
-            let dateFormatter = ISO8601DateFormatter()
+            // -------------------------------------------------
+            // 9. Merge remote expenses.
+            // -------------------------------------------------
 
-            // Create expenses from Supabase
+            for remoteExpense
+            in remoteExpenses {
 
-            for remoteExpense in remoteExpenses {
-
-                guard
-                    case let .string(idString) =
-                        remoteExpense["id"],
-                    let expenseID =
-                        UUID(uuidString: idString)
-                else {
-                    continue
-                }
-
-                let expense = Expense(context: context)
-
-                expense.id = expenseID
-
-                if case let .string(value) =
-                    remoteExpense["title"] {
-
-                    expense.title = value
-                }
-
-                if let amount = remoteExpense["amount"] {
-
-                    switch amount {
-
-                    case .double(let value):
-                        expense.amount = value
-
-                    case .integer(let value):
-                        expense.amount = Double(value)
-
-                    default:
-                        break
-                    }
-                }
-
-                if case let .string(value) =
-                    remoteExpense["date"],
-                    let date =
-                        dateFormatter.date(from: value) {
-
-                    expense.date = date
-                }
-
-                if case let .string(value) =
-                    remoteExpense["merchant_name"] {
-
-                    expense.merchantName = value
-                }
-
-                if case let .string(value) =
-                    remoteExpense["source"] {
-
-                    expense.source = value
-                }
-
-                if case let .string(value) =
-                    remoteExpense["transaction_id"] {
-
-                    expense.transactionID = value
-                }
-
-                if case let .string(categoryIDString) =
-                    remoteExpense["category_id"],
-                    let categoryID =
-                        UUID(uuidString: categoryIDString) {
-
-                    expense.category =
-                        categoriesByID[categoryID]
-                }
+                try mergeRemoteExpense(
+                    remoteExpense,
+                    userID: userID,
+                    categoriesByID:
+                        categoriesByID
+                )
             }
 
             try context.save()
 
             AppLogger.shared.info(
-                "Full sync completed: \(categoriesByID.count) categories, \(remoteExpenses.count) expenses"
+                "Full sync completed: \(categoriesByID.count) categories, \(remoteExpenses.count) remote expenses"
             )
 
         } catch {
-
 
             AppLogger.shared.error(
                 "Full sync failed: \(error.localizedDescription)"
             )
         }
     }
-
 }

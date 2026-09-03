@@ -1,17 +1,9 @@
-//
-//  SyncService+Expenses.swift
-//  PayTrack
-//
-//  Created by bmtech on 29.08.2026.
-//
-
 import Foundation
 import CoreData
 import Supabase
 
 extension SyncService {
 
-    // syncOneExpense
     // MARK: - Sync one expense
 
     func syncOneExpense(_ expense: Expense) async {
@@ -24,13 +16,17 @@ extension SyncService {
                 return
             }
 
+            // This expense now belongs to the Premium user.
+            expense.userID = user.id
+
             let categoryID = expense.category?.id?.uuidString
 
             let data: [String: AnyJSON] = [
-
                 "id": .string(expenseID.uuidString),
 
-                "user_id": .string(user.id.uuidString),
+                "user_id": .string(
+                    user.id.uuidString
+                ),
 
                 "title": .string(
                     expense.title ?? ""
@@ -68,6 +64,9 @@ extension SyncService {
                 .upsert(data)
                 .execute()
 
+            // Save the owner locally.
+            try context.save()
+
             AppLogger.shared.info(
                 "Expense synced successfully: \(expense.title ?? "No title")"
             )
@@ -79,10 +78,12 @@ extension SyncService {
         }
     }
 
-    // deleteExpense
     // MARK: - Delete expense
 
-    func deleteExpense(id: UUID, title: String) async {
+    func deleteExpense(
+        id: UUID,
+        title: String
+    ) async {
 
         do {
             let user = try await client.auth.session.user
@@ -90,8 +91,14 @@ extension SyncService {
             try await client
                 .from("expenses")
                 .delete()
-                .eq("id", value: id.uuidString)
-                .eq("user_id", value: user.id.uuidString)
+                .eq(
+                    "id",
+                    value: id.uuidString
+                )
+                .eq(
+                    "user_id",
+                    value: user.id.uuidString
+                )
                 .execute()
 
             AppLogger.shared.info(
@@ -105,7 +112,6 @@ extension SyncService {
         }
     }
 
-    // applyRealtimeExpenseInsert
     // MARK: - Apply Realtime expense INSERT
 
     func applyRealtimeExpenseInsert(
@@ -114,54 +120,69 @@ extension SyncService {
 
         guard
             case let .string(idString) = record["id"],
-            let expenseID = UUID(uuidString: idString)
+            let expenseID = UUID(uuidString: idString),
+
+            case let .string(userIDString) = record["user_id"],
+            let userID = UUID(uuidString: userIDString)
         else {
             AppLogger.shared.error(
-                "Realtime expense INSERT: invalid ID"
+                "Realtime expense INSERT: invalid ID or user_id"
             )
             return
         }
 
-        // Check by Expense ID
+        // Ignore records belonging to another user.
+        guard
+            UserDefaults.standard.string(
+                forKey: "activeUserID"
+            ) == userID.uuidString
+        else {
+            return
+        }
+
         let idRequest: NSFetchRequest<Expense> =
             Expense.fetchRequest()
 
         idRequest.fetchLimit = 1
         idRequest.predicate = NSPredicate(
-            format: "id == %@",
-            expenseID as CVarArg
+            format: "id == %@ AND userID == %@",
+            expenseID as CVarArg,
+            userID as CVarArg
         )
 
         do {
 
             if try context.fetch(idRequest).first != nil {
-
                 AppLogger.shared.info(
                     "Realtime expense INSERT skipped: ID already exists"
                 )
-
                 return
             }
 
-            // Check by bank transaction ID
-            if case let .string(transactionID) = record["transaction_id"],
+            // Check by bank transaction ID.
+            if case let .string(transactionID) =
+                record["transaction_id"],
                !transactionID.isEmpty {
 
-                let transactionRequest: NSFetchRequest<Expense> =
+                let transactionRequest:
+                    NSFetchRequest<Expense> =
                     Expense.fetchRequest()
 
                 transactionRequest.fetchLimit = 1
+
                 transactionRequest.predicate = NSPredicate(
-                    format: "transactionID == %@",
-                    transactionID
+                    format: "transactionID == %@ AND userID == %@",
+                    transactionID,
+                    userID as CVarArg
                 )
 
-                if try context.fetch(transactionRequest).first != nil {
+                if try context.fetch(
+                    transactionRequest
+                ).first != nil {
 
                     AppLogger.shared.info(
                         "Realtime expense INSERT skipped: transaction already exists"
                     )
-
                     return
                 }
             }
@@ -169,14 +190,11 @@ extension SyncService {
             let expense = Expense(context: context)
 
             expense.id = expenseID
+            expense.userID = userID
 
-            if case let .string(value) = record["user_id"] {
-                // Не використовуємо user_id для Core Data Expense,
-                // якщо такого атрибута немає в моделі.
-                _ = value
-            }
+            if case let .string(value) =
+                record["title"] {
 
-            if case let .string(value) = record["title"] {
                 expense.title = value
             }
 
@@ -195,41 +213,58 @@ extension SyncService {
                 }
             }
 
-            if case let .string(value) = record["date"] {
+            if case let .string(value) =
+                record["date"] {
 
-                let formatter = ISO8601DateFormatter()
+                let formatter =
+                    ISO8601DateFormatter()
 
-                if let date = formatter.date(from: value) {
+                if let date =
+                    formatter.date(from: value) {
+
                     expense.date = date
                 }
             }
 
-            if case let .string(value) = record["merchant_name"] {
+            if case let .string(value) =
+                record["merchant_name"] {
+
                 expense.merchantName = value
             }
 
-            if case let .string(value) = record["source"] {
+            if case let .string(value) =
+                record["source"] {
+
                 expense.source = value
             }
 
-            if case let .string(value) = record["transaction_id"] {
+            if case let .string(value) =
+                record["transaction_id"] {
+
                 expense.transactionID = value
             }
 
-            if case let .string(categoryIDString) = record["category_id"],
-               let categoryID = UUID(uuidString: categoryIDString) {
+            if case let .string(categoryIDString) =
+                record["category_id"],
+               let categoryID =
+                UUID(uuidString: categoryIDString) {
 
-                let categoryRequest: NSFetchRequest<Category> =
+                let categoryRequest:
+                    NSFetchRequest<Category> =
                     Category.fetchRequest()
 
                 categoryRequest.fetchLimit = 1
+
                 categoryRequest.predicate = NSPredicate(
-                    format: "id == %@",
-                    categoryID as CVarArg
+                    format: "id == %@ AND userID == %@",
+                    categoryID as CVarArg,
+                    userID as CVarArg
                 )
 
                 expense.category =
-                    try context.fetch(categoryRequest).first
+                    try context.fetch(
+                        categoryRequest
+                    ).first
             }
 
             try context.save()
@@ -246,7 +281,6 @@ extension SyncService {
         }
     }
 
-    // applyRealtimeExpenseUpdate
     // MARK: - Apply Realtime expense UPDATE
 
     func applyRealtimeExpenseUpdate(
@@ -255,40 +289,63 @@ extension SyncService {
 
         guard
             case let .string(idString) = record["id"],
-            let expenseID = UUID(uuidString: idString)
+            let expenseID =
+                UUID(uuidString: idString),
+
+            case let .string(userIDString) =
+                record["user_id"],
+            let userID =
+                UUID(uuidString: userIDString)
         else {
             AppLogger.shared.error(
-                "Realtime expense UPDATE: invalid ID"
+                "Realtime expense UPDATE: invalid ID or user_id"
             )
             return
         }
 
-        let request: NSFetchRequest<Expense> =
+        // Ignore records belonging to another user.
+        guard
+            UserDefaults.standard.string(
+                forKey: "activeUserID"
+            ) == userID.uuidString
+        else {
+            return
+        }
+
+        let request:
+            NSFetchRequest<Expense> =
             Expense.fetchRequest()
 
         request.fetchLimit = 1
+
         request.predicate = NSPredicate(
-            format: "id == %@",
-            expenseID as CVarArg
+            format: "id == %@ AND userID == %@",
+            expenseID as CVarArg,
+            userID as CVarArg
         )
 
         do {
 
-            guard let expense = try context.fetch(request).first else {
-
+            guard let expense =
+                try context.fetch(request).first
+            else {
                 AppLogger.shared.info(
                     "Realtime expense UPDATE: local expense not found"
                 )
-
                 return
             }
 
-            if case let .string(value) = record["title"] {
+            if case let .string(value) =
+                record["title"] {
+
                 expense.title = value
             }
-            
-            if let amount = record["amount"] {
+
+            if let amount =
+                record["amount"] {
+
                 switch amount {
+
                 case .double(let value):
                     expense.amount = value
 
@@ -300,42 +357,61 @@ extension SyncService {
                 }
             }
 
-            if case let .string(value) = record["date"] {
+            if case let .string(value) =
+                record["date"] {
 
-                let formatter = ISO8601DateFormatter()
+                let formatter =
+                    ISO8601DateFormatter()
 
-                if let date = formatter.date(from: value) {
+                if let date =
+                    formatter.date(from: value) {
+
                     expense.date = date
                 }
             }
 
-            if case let .string(value) = record["merchant_name"] {
+            if case let .string(value) =
+                record["merchant_name"] {
+
                 expense.merchantName = value
             }
 
-            if case let .string(value) = record["source"] {
+            if case let .string(value) =
+                record["source"] {
+
                 expense.source = value
             }
 
-            if case let .string(value) = record["transaction_id"] {
+            if case let .string(value) =
+                record["transaction_id"] {
+
                 expense.transactionID = value
             }
 
-            if case let .string(categoryIDString) = record["category_id"],
-               let categoryID = UUID(uuidString: categoryIDString) {
+            if case let .string(categoryIDString) =
+                record["category_id"],
+               let categoryID =
+                UUID(uuidString: categoryIDString) {
 
-                let categoryRequest: NSFetchRequest<Category> =
+                let categoryRequest:
+                    NSFetchRequest<Category> =
                     Category.fetchRequest()
 
                 categoryRequest.fetchLimit = 1
+
                 categoryRequest.predicate = NSPredicate(
-                    format: "id == %@",
-                    categoryID as CVarArg
+                    format: "id == %@ AND userID == %@",
+                    categoryID as CVarArg,
+                    userID as CVarArg
                 )
 
                 expense.category =
-                    try context.fetch(categoryRequest).first
+                    try context.fetch(
+                        categoryRequest
+                    ).first
+
             } else {
+
                 expense.category = nil
             }
 
@@ -352,7 +428,7 @@ extension SyncService {
             )
         }
     }
-    // applyRealtimeExpenseDelete
+
     // MARK: - Apply Realtime expense DELETE
 
     func applyRealtimeExpenseDelete(
@@ -361,35 +437,54 @@ extension SyncService {
 
         guard
             case let .string(idString) = record["id"],
-            let expenseID = UUID(uuidString: idString)
+            let expenseID =
+                UUID(uuidString: idString),
+
+            case let .string(userIDString) =
+                record["user_id"],
+            let userID =
+                UUID(uuidString: userIDString)
         else {
             AppLogger.shared.error(
-                "Realtime expense DELETE: invalid ID"
+                "Realtime expense DELETE: invalid ID or user_id"
             )
             return
         }
 
-        let request: NSFetchRequest<Expense> =
+        // Ignore records belonging to another user.
+        guard
+            UserDefaults.standard.string(
+                forKey: "activeUserID"
+            ) == userID.uuidString
+        else {
+            return
+        }
+
+        let request:
+            NSFetchRequest<Expense> =
             Expense.fetchRequest()
 
         request.fetchLimit = 1
+
         request.predicate = NSPredicate(
-            format: "id == %@",
-            expenseID as CVarArg
+            format: "id == %@ AND userID == %@",
+            expenseID as CVarArg,
+            userID as CVarArg
         )
 
         do {
 
-            guard let expense = try context.fetch(request).first else {
-
+            guard let expense =
+                try context.fetch(request).first
+            else {
                 AppLogger.shared.info(
                     "Realtime expense DELETE: local expense not found"
                 )
-
                 return
             }
 
-            let title = expense.title ?? "No title"
+            let title =
+                expense.title ?? "No title"
 
             context.delete(expense)
 

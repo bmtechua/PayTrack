@@ -1,6 +1,12 @@
+//
+//  AuthService.swift
+//  PayTrack
+//
+
 import Foundation
 import Combine
 import Supabase
+import Auth
 
 @MainActor
 final class AuthService: ObservableObject {
@@ -10,51 +16,55 @@ final class AuthService: ObservableObject {
     private let client = SupabaseManager.shared.client
 
     @Published private(set) var user: User?
+
     @Published var isPasswordRecovery = false
 
     private init() {}
-    
+
     private var authStateTask: Task<Void, Never>?
-    
+
     // MARK: - Auth state listener
 
     func startAuthStateListener() {
+
         authStateTask?.cancel()
 
         authStateTask = Task { [weak self] in
-            guard let self else { return }
 
-            for await (event, session) in client.auth.authStateChanges {
+            guard let self else {
+                return
+            }
+
+            for await (event, session)
+            in client.auth.authStateChanges {
+
                 switch event {
 
                 case .passwordRecovery:
+
                     AppLogger.shared.info(
                         "Password recovery event received"
                     )
 
-                    await MainActor.run {
-                        self.isPasswordRecovery = true
-                        self.user = session?.user
-                    }
+                    self.isPasswordRecovery = true
+                    self.user = session?.user
 
                 case .signedIn:
+
                     AppLogger.shared.info(
                         "Auth signed in event received"
                     )
 
-                    await MainActor.run {
-                        self.user = session?.user
-                    }
+                    self.user = session?.user
 
                 case .signedOut:
+
                     AppLogger.shared.info(
                         "Auth signed out event received"
                     )
 
-                    await MainActor.run {
-                        self.user = nil
-                        self.isPasswordRecovery = false
-                    }
+                    self.user = nil
+                    self.isPasswordRecovery = false
 
                 default:
                     break
@@ -66,19 +76,28 @@ final class AuthService: ObservableObject {
     // MARK: - Load current user
 
     func loadCurrentUser() async {
+
         do {
+
             user = try await client.auth.session.user
 
             AppLogger.shared.info(
                 "Current user loaded: \(user?.email ?? "unknown")"
             )
-            
+
             if let userID = user?.id {
-                await SyncService.shared.prepareForUser(userID)
+
+                await SyncService.shared.prepareForUser(
+                    userID
+                )
+
                 await SyncService.shared.startCategoriesRealtime()
+
                 await SyncService.shared.startExpensesRealtime()
             }
+
         } catch {
+
             user = nil
         }
     }
@@ -90,14 +109,18 @@ final class AuthService: ObservableObject {
         password: String
     ) async throws {
 
-        let cleanEmail = email
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
+        let cleanEmail =
+            email
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                .lowercased()
 
-        let response = try await client.auth.signUp(
-            email: cleanEmail,
-            password: password
-        )
+        let response =
+            try await client.auth.signUp(
+                email: cleanEmail,
+                password: password
+            )
 
         user = response.user
 
@@ -109,10 +132,8 @@ final class AuthService: ObservableObject {
             response.user.id
         )
 
-        await SyncService.shared.createDefaultCategories(
-            for: response.user.id
-        )
         await SyncService.shared.startCategoriesRealtime()
+
         await SyncService.shared.startExpensesRealtime()
 
         AppLogger.shared.info(
@@ -129,14 +150,18 @@ final class AuthService: ObservableObject {
         password: String
     ) async throws {
 
-        let cleanEmail = email
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
+        let cleanEmail =
+            email
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                .lowercased()
 
-        let session = try await client.auth.signIn(
-            email: cleanEmail,
-            password: password
-        )
+        let session =
+            try await client.auth.signIn(
+                email: cleanEmail,
+                password: password
+            )
 
         user = session.user
 
@@ -147,7 +172,9 @@ final class AuthService: ObservableObject {
         await SyncService.shared.prepareForUser(
             session.user.id
         )
+
         await SyncService.shared.startCategoriesRealtime()
+
         await SyncService.shared.startExpensesRealtime()
 
         AppLogger.shared.info(
@@ -156,7 +183,7 @@ final class AuthService: ObservableObject {
 
         await SyncService.shared.syncAll()
     }
-    
+
     // MARK: - Change password
 
     func changePassword(
@@ -177,32 +204,42 @@ final class AuthService: ObservableObject {
     // MARK: - Sign out
 
     func signOut() async throws {
-        
+
+        // Stop Premium realtime.
         await SyncService.shared.stopCategoriesRealtime()
+
         await SyncService.shared.stopExpensesRealtime()
+
+        // Remove only active Premium session state.
+        // Premium local data remains on device.
+        await SyncService.shared.clearLocalData()
 
         try await client.auth.signOut()
 
         user = nil
 
         AppLogger.shared.info(
-            "Logout successful"
+            "Logout successful. Premium local data preserved."
         )
     }
-    
+
     // MARK: - Reset password
 
-    func resetPassword(email: String) async throws {
+    func resetPassword(
+        email: String
+    ) async throws {
 
-        let cleanEmail = email
-            .trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-            .lowercased()
+        let cleanEmail =
+            email
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                .lowercased()
 
-        let redirectURL = URL(
-            string: "paytrack://reset-password"
-        )!
+        let redirectURL =
+            URL(
+                string: "paytrack://reset-password"
+            )!
 
         AppLogger.shared.info(
             "Password recovery requested: \(cleanEmail)"
@@ -217,5 +254,4 @@ final class AuthService: ObservableObject {
             "Password recovery email sent: \(cleanEmail)"
         )
     }
-
 }

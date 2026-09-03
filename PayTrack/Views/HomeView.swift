@@ -5,23 +5,27 @@
 //  Created by bmtech on 29.06.2026.
 //
 
-
-
 import SwiftUI
 import CoreData
+import Auth
+
 
 struct HomeView: View {
 
     @AppStorage("language")
     private var language = "uk"
-    
+
     @AppStorage("currency")
     private var currency = "UAH"
-    
+
     @AppStorage("monthlyBudget")
     private var monthlyBudget: Double = 5000
-    
-    @State private var monthOffset: Int = 0
+
+    @ObservedObject
+    private var authService = AuthService.shared
+
+    @State
+    private var monthOffset: Int = 0
 
     @FetchRequest(
         sortDescriptors: [
@@ -41,18 +45,22 @@ struct HomeView: View {
 
                 VStack(spacing: 20) {
 
-
-
                     // MARK: - MONTH TOTAL
+
                     VStack {
 
                         Text("this_month")
                             .font(.headline)
                             .foregroundStyle(.secondary)
 
-                        Text(formatAmount(monthTotal(), currency: currency))
-                            .font(.largeTitle)
-                            .bold()
+                        Text(
+                            formatAmount(
+                                monthTotal(),
+                                currency: currency
+                            )
+                        )
+                        .font(.largeTitle)
+                        .bold()
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -62,27 +70,57 @@ struct HomeView: View {
                     )
 
                     // MARK: - BUDGET
-                    VStack(alignment: .leading, spacing: 10) {
+
+                    VStack(
+                        alignment: .leading,
+                        spacing: 10
+                    ) {
 
                         HStack {
+
                             Text("monthly_budget")
                                 .font(.headline)
 
                             Spacer()
 
-                            Text(formatAmount(monthlyBudget, currency: currency))
-                                .foregroundStyle(.secondary)
+                            Text(
+                                formatAmount(
+                                    monthlyBudget,
+                                    currency: currency
+                                )
+                            )
+                            .foregroundStyle(.secondary)
                         }
 
                         ProgressView(
-                            value: min(budgetProgress(), 1)
+                            value: min(
+                                budgetProgress(),
+                                1
+                            )
                         )
-                        .tint(budgetProgress() > 1 ? .red : .blue)
+                        .tint(
+                            budgetProgress() > 1
+                            ? .red
+                            : .blue
+                        )
 
                         HStack {
-                            Text(formatAmount(monthTotal(), currency: currency))
+
+                            Text(
+                                formatAmount(
+                                    monthTotal(),
+                                    currency: currency
+                                )
+                            )
+
                             Spacer()
-                            Text(String(format: "%.0f%%", budgetProgress() * 100))
+
+                            Text(
+                                String(
+                                    format: "%.0f%%",
+                                    budgetProgress() * 100
+                                )
+                            )
                         }
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -90,21 +128,28 @@ struct HomeView: View {
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 15)
-                            .fill(Color.gray.opacity(0.1))
+                            .fill(
+                                Color.gray.opacity(0.1)
+                            )
                     )
 
                     if budgetProgress() > 1 {
+
                         Text("budget_exceeded")
                             .foregroundStyle(.red)
                             .font(.caption)
                     }
 
                     // MARK: - STATS
+
                     HStack {
 
                         StatCard(
                             title: "today",
-                            value: formatAmount(todayTotal(), currency: currency)
+                            value: formatAmount(
+                                todayTotal(),
+                                currency: currency
+                            )
                         )
 
                         StatCard(
@@ -114,15 +159,26 @@ struct HomeView: View {
                     }
 
                     // MARK: - ADD BUTTON
+
                     NavigationLink {
+
                         AddExpenseView()
+
                     } label: {
-                        Label("add_expense", systemImage: "plus")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(.blue)
-                            .foregroundColor(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 15))
+
+                        Label(
+                            "add_expense",
+                            systemImage: "plus"
+                        )
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(.blue)
+                        .foregroundColor(.white)
+                        .clipShape(
+                            RoundedRectangle(
+                                cornerRadius: 15
+                            )
+                        )
                     }
                 }
                 .padding()
@@ -131,18 +187,38 @@ struct HomeView: View {
         }
     }
 
-   
-
-
-
     // MARK: - FILTER
+
     private func filteredExpenses() -> [Expense] {
 
         let calendar = Calendar.current
 
-        return expenses.filter {
+        return expenses.filter { expense in
 
-            guard let date = $0.date else { return false }
+            // MARK: Owner filter
+
+            if let userID = authService.user?.id {
+
+                // Premium:
+                // show only current user's expenses
+                guard expense.userID == userID else {
+                    return false
+                }
+
+            } else {
+
+                // Free:
+                // show only local Free expenses
+                guard expense.userID == nil else {
+                    return false
+                }
+            }
+
+            // MARK: Month filter
+
+            guard let date = expense.date else {
+                return false
+            }
 
             return calendar.isDate(
                 date,
@@ -153,27 +229,46 @@ struct HomeView: View {
     }
 
     // MARK: - TOTAL
+
     private func monthTotal() -> Double {
-        filteredExpenses().reduce(0) { $0 + $1.amount }
+
+        filteredExpenses()
+            .reduce(0) {
+                $0 + $1.amount
+            }
     }
 
     private func todayTotal() -> Double {
 
         filteredExpenses()
             .filter {
-                guard let date = $0.date else { return false }
-                return Calendar.current.isDateInToday(date)
+
+                guard let date = $0.date else {
+                    return false
+                }
+
+                return Calendar.current.isDateInToday(
+                    date
+                )
             }
-            .reduce(0) { $0 + $1.amount }
+            .reduce(0) {
+                $0 + $1.amount
+            }
     }
 
     // MARK: - BUDGET
+
     private func budgetProgress() -> Double {
-        guard monthlyBudget > 0 else { return 0 }
+
+        guard monthlyBudget > 0 else {
+            return 0
+        }
+
         return monthTotal() / monthlyBudget
     }
 }
 
 #Preview {
+
     HomeView()
 }

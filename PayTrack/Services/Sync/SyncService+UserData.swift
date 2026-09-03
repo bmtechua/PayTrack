@@ -1,10 +1,3 @@
-//
-//  SyncService+UserData.swift
-//  PayTrack
-//
-//  Created by bmtech on 29.08.2026.
-//
-
 import Foundation
 import CoreData
 import Supabase
@@ -18,92 +11,54 @@ extension SyncService {
         let key = "activeUserID"
         let currentUserID = UserDefaults.standard.string(forKey: key)
 
+        // Already active user
         if currentUserID == userID.uuidString {
             return
         }
 
         AppLogger.shared.info(
-            "User changed. Clearing local data for previous user"
+            "Preparing local data for user: \(userID)"
         )
 
-        do {
-            let categoryRequest: NSFetchRequest<Category> =
-                Category.fetchRequest()
+        // We do NOT delete local data here.
+        //
+        // Free data:
+        // userID == nil
+        //
+        // Premium data:
+        // userID == current Premium user's UUID
+        //
+        // This allows us to switch between Free and Premium
+        // without losing local data.
 
-            let categories = try context.fetch(categoryRequest)
+        UserDefaults.standard.set(
+            userID.uuidString,
+            forKey: key
+        )
 
-            for category in categories {
-                context.delete(category)
-            }
-
-            let expenseRequest: NSFetchRequest<Expense> =
-                Expense.fetchRequest()
-
-            let expenses = try context.fetch(expenseRequest)
-
-            for expense in expenses {
-                context.delete(expense)
-            }
-
-            try context.save()
-
-            UserDefaults.standard.set(
-                userID.uuidString,
-                forKey: key
-            )
-
-            AppLogger.shared.info(
-                "Local data cleared for new user"
-            )
-
-        } catch {
-            AppLogger.shared.error(
-                "Failed to prepare local data: \(error.localizedDescription)"
-            )
-        }
+        AppLogger.shared.info(
+            "Active Premium user changed to: \(userID)"
+        )
     }
 
-    // MARK: - Clear Data after logout
+    // MARK: - Clear Premium session
+
     func clearLocalData() async {
 
-        do {
+        // IMPORTANT:
+        // We do NOT delete Core Data here.
+        //
+        // Premium user's local data must remain on the device
+        // so it can be restored when the user logs in again.
+        //
+        // We only remove the active user marker.
 
-            let categoryRequest: NSFetchRequest<Category> =
-                Category.fetchRequest()
+        UserDefaults.standard.removeObject(
+            forKey: "activeUserID"
+        )
 
-            let categories =
-                try context.fetch(categoryRequest)
-
-            for category in categories {
-                context.delete(category)
-            }
-
-            let expenseRequest: NSFetchRequest<Expense> =
-                Expense.fetchRequest()
-
-            let expenses =
-                try context.fetch(expenseRequest)
-
-            for expense in expenses {
-                context.delete(expense)
-            }
-
-            try context.save()
-
-            UserDefaults.standard.removeObject(
-                forKey: "activeUserID"
-            )
-
-            AppLogger.shared.info(
-                "Local data cleared after logout"
-            )
-
-        } catch {
-
-            AppLogger.shared.error(
-                "Failed to clear local data after logout: \(error.localizedDescription)"
-            )
-        }
+        AppLogger.shared.info(
+            "Premium session cleared. Local data preserved."
+        )
     }
-
 }

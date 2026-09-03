@@ -2,8 +2,6 @@
 //  SyncService+Categories.swift
 //  PayTrack
 //
-//  Created by bmtech on 29.08.2026.
-//
 
 import Foundation
 import CoreData
@@ -11,18 +9,26 @@ import Supabase
 
 extension SyncService {
 
-    // syncOneCategory
     // MARK: - Sync one category
 
     func syncOneCategory(_ category: Category) async {
 
         do {
-            let user = try await client.auth.session.user
+
+            let user =
+                try await client.auth.session.user
 
             guard let categoryID = category.id else {
-                AppLogger.shared.error("Category has no ID")
+
+                AppLogger.shared.error(
+                    "Category has no ID"
+                )
+
                 return
             }
+
+            // This category belongs to the Premium user.
+            category.userID = user.id
 
             let data: [String: AnyJSON] = [
 
@@ -52,29 +58,44 @@ extension SyncService {
                 .upsert(data)
                 .execute()
 
+            try context.save()
+
             AppLogger.shared.info(
                 "Category synced successfully: \(category.name ?? "No name")"
             )
 
         } catch {
+
             AppLogger.shared.error(
                 "Category sync failed: \(error.localizedDescription)"
             )
         }
     }
-    // deleteCategory
+
+
     // MARK: - Delete category
 
-    func deleteCategory(id: UUID, name: String) async {
+    func deleteCategory(
+        id: UUID,
+        name: String
+    ) async {
 
         do {
-            let user = try await client.auth.session.user
+
+            let user =
+                try await client.auth.session.user
 
             try await client
                 .from("categories")
                 .delete()
-                .eq("id", value: id.uuidString)
-                .eq("user_id", value: user.id.uuidString)
+                .eq(
+                    "id",
+                    value: id.uuidString
+                )
+                .eq(
+                    "user_id",
+                    value: user.id.uuidString
+                )
                 .execute()
 
             AppLogger.shared.info(
@@ -82,67 +103,13 @@ extension SyncService {
             )
 
         } catch {
+
             AppLogger.shared.error(
                 "Category delete sync failed: \(error.localizedDescription)"
             )
         }
     }
-    // createDefaultCategories
-    // MARK: - Create default categories
 
-    func createDefaultCategories(for userID: UUID) async {
-
-        let defaultNames = [
-            "Food",
-            "House",
-            "Relax",
-            "Transport",
-            "Other"
-        ]
-
-        do {
-            let request: NSFetchRequest<Category> =
-                Category.fetchRequest()
-
-            request.predicate = NSPredicate(
-                format: "userID == %@",
-                userID as CVarArg
-            )
-
-            let existingCategories =
-                try context.fetch(request)
-
-            for name in defaultNames {
-
-                if existingCategories.contains(
-                    where: { $0.name == name }
-                ) {
-                    continue
-                }
-
-                let category = Category(context: context)
-
-                category.id = UUID()
-                category.userID = userID
-                category.name = name
-                category.icon = "📌"
-                category.is_default = true
-            }
-
-            try context.save()
-
-            AppLogger.shared.info(
-                "Default categories created for user: \(userID)"
-            )
-
-        } catch {
-            AppLogger.shared.error(
-                "Failed to create default categories: \(error.localizedDescription)"
-            )
-        }
-    }
-    
-    // applyRealtimeCategoryInsert
     // MARK: - Apply Realtime category INSERT
 
     func applyRealtimeCategoryInsert(
@@ -150,51 +117,87 @@ extension SyncService {
     ) {
 
         guard
-            case let .string(idString) = record["id"],
-            let categoryID = UUID(uuidString: idString)
+            case let .string(idString) =
+                record["id"],
+
+            let categoryID =
+                UUID(uuidString: idString),
+
+            case let .string(userIDString) =
+                record["user_id"],
+
+            let userID =
+                UUID(uuidString: userIDString)
+
         else {
+
             AppLogger.shared.error(
-                "Realtime category INSERT: invalid ID"
+                "Realtime category INSERT: invalid ID or user_id"
             )
+
             return
         }
 
-        let request: NSFetchRequest<Category> =
+        guard
+            UserDefaults.standard.string(
+                forKey: "activeUserID"
+            ) == userID.uuidString
+        else {
+            return
+        }
+
+        let request:
+            NSFetchRequest<Category> =
             Category.fetchRequest()
 
         request.fetchLimit = 1
-        request.predicate = NSPredicate(
-            format: "id == %@",
-            categoryID as CVarArg
-        )
+
+        request.predicate =
+            NSPredicate(
+                format: "id == %@ AND userID == %@",
+                categoryID as CVarArg,
+                userID as CVarArg
+            )
 
         do {
 
             if try context.fetch(request).first != nil {
+
                 AppLogger.shared.info(
                     "Realtime category INSERT skipped: already exists"
                 )
+
                 return
             }
 
-            let category = Category(context: context)
+            let category =
+                Category(context: context)
 
-            category.id = categoryID
+            category.id =
+                categoryID
 
-            if case let .string(value) = record["user_id"] {
-                category.userID = UUID(uuidString: value)
+            category.userID =
+                userID
+
+            if case let .string(value) =
+                record["name"] {
+
+                category.name =
+                    value
             }
 
-            if case let .string(value) = record["name"] {
-                category.name = value
+            if case let .string(value) =
+                record["icon"] {
+
+                category.icon =
+                    value
             }
 
-            if case let .string(value) = record["icon"] {
-                category.icon = value
-            }
+            if case let .bool(value) =
+                record["is_default"] {
 
-            if case let .bool(value) = record["is_default"] {
-                category.is_default = value
+                category.is_default =
+                    value
             }
 
             try context.save()
@@ -210,7 +213,7 @@ extension SyncService {
             )
         }
     }
-    // applyRealtimeCategoryUpdate
+
     // MARK: - Apply Realtime category UPDATE
 
     func applyRealtimeCategoryUpdate(
@@ -218,37 +221,53 @@ extension SyncService {
     ) {
 
         guard
-            case let .string(idString) = record["id"],
-            let categoryID = UUID(uuidString: idString)
+            case let .string(idString) =
+                record["id"],
+
+            let categoryID =
+                UUID(uuidString: idString),
+
+            case let .string(userIDString) =
+                record["user_id"],
+
+            let userID =
+                UUID(uuidString: userIDString)
+
         else {
+
             AppLogger.shared.error(
-                "Realtime category UPDATE: invalid ID"
+                "Realtime category UPDATE: invalid ID or user_id"
             )
+
             return
         }
 
-        let request: NSFetchRequest<Category> =
+        guard
+            UserDefaults.standard.string(
+                forKey: "activeUserID"
+            ) == userID.uuidString
+        else {
+            return
+        }
+
+        let request:
+            NSFetchRequest<Category> =
             Category.fetchRequest()
 
         request.fetchLimit = 1
-        request.predicate = NSPredicate(
-            format: "id == %@",
-            categoryID as CVarArg
-        )
+
+        request.predicate =
+            NSPredicate(
+                format: "id == %@ AND userID == %@",
+                categoryID as CVarArg,
+                userID as CVarArg
+            )
 
         do {
 
-            let localCategory = try context.fetch(request).first
-
-            AppLogger.shared.info(
-                "Realtime UPDATE id: \(categoryID.uuidString)"
-            )
-
-            AppLogger.shared.info(
-                "Local category found: \(localCategory != nil)"
-            )
-
-            guard let category = localCategory else {
+            guard let category =
+                try context.fetch(request).first
+            else {
 
                 AppLogger.shared.info(
                     "Realtime category UPDATE: local category not found"
@@ -257,21 +276,29 @@ extension SyncService {
                 return
             }
 
-            if case let .string(value) = record["name"] {
-                category.name = value
+            if case let .string(value) =
+                record["name"] {
+
+                category.name =
+                    value
             }
 
-            if case let .string(value) = record["icon"] {
-                category.icon = value
+            if case let .string(value) =
+                record["icon"] {
+
+                category.icon =
+                    value
             }
 
-            if case let .bool(value) = record["is_default"] {
-                category.is_default = value
+            if case let .bool(value) =
+                record["is_default"] {
+
+                category.is_default =
+                    value
             }
 
-            if case let .string(value) = record["user_id"] {
-                category.userID = UUID(uuidString: value)
-            }
+            category.userID =
+                userID
 
             try context.save()
 
@@ -286,8 +313,8 @@ extension SyncService {
             )
         }
     }
-    // applyRealtimeCategoryDelete
-    // MARK: - Apply Realtime category DELETE
+
+    // MARK: - Realtime DELETE
 
     func applyRealtimeCategoryDelete(
         _ record: [String: AnyJSON]
@@ -295,11 +322,21 @@ extension SyncService {
 
         guard
             case let .string(idString) = record["id"],
-            let categoryID = UUID(uuidString: idString)
+            let categoryID = UUID(uuidString: idString),
+            case let .string(userIDString) = record["user_id"],
+            let userID = UUID(uuidString: userIDString)
         else {
             AppLogger.shared.error(
-                "Realtime category DELETE: invalid ID"
+                "Realtime category DELETE: invalid ID or user_id"
             )
+            return
+        }
+
+        guard
+            UserDefaults.standard.string(
+                forKey: "activeUserID"
+            ) == userID.uuidString
+        else {
             return
         }
 
@@ -307,30 +344,33 @@ extension SyncService {
             Category.fetchRequest()
 
         request.fetchLimit = 1
+
         request.predicate = NSPredicate(
-            format: "id == %@",
-            categoryID as CVarArg
+            format: "id == %@ AND userID == %@",
+            categoryID as CVarArg,
+            userID as CVarArg
         )
 
         do {
 
-            guard let category = try context.fetch(request).first else {
-
+            guard let category =
+                try context.fetch(request).first
+            else {
                 AppLogger.shared.info(
                     "Realtime category DELETE: local category not found"
                 )
-
                 return
             }
 
-            let name = category.name ?? "No name"
+            let categoryName =
+                category.name ?? "No name"
 
             context.delete(category)
 
             try context.save()
 
             AppLogger.shared.info(
-                "Realtime category DELETE applied: \(name)"
+                "Realtime category DELETE applied: \(categoryName)"
             )
 
         } catch {

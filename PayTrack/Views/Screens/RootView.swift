@@ -16,9 +16,7 @@ struct RootView: View {
     }
 
     var body: some View {
-
         Group {
-
             switch phase {
 
             case .welcome:
@@ -28,17 +26,13 @@ struct RootView: View {
                 LoadingView()
 
             case .main:
-
                 if let persistenceController {
-
                     MainTabView()
                         .environment(
                             \.managedObjectContext,
                             persistenceController.container.viewContext
                         )
-
                 } else {
-
                     LoadingView()
                 }
             }
@@ -54,9 +48,6 @@ struct RootView: View {
 
         // MARK: - Welcome
 
-        // WelcomeView is shown immediately
-        // when the application process starts.
-
         try? await Task.sleep(
             for: .seconds(1)
         )
@@ -65,29 +56,13 @@ struct RootView: View {
 
         phase = .loading
 
-        // Create Core Data only after WelcomeView.
-        // This prevents the white screen caused by
-        // PersistenceController.shared being created
-        // before the first SwiftUI screen appears.
-
+        // Core Data is created only after WelcomeView.
         persistenceController =
             PersistenceController.shared
-
-        // Artificial loading delay
 
         try? await Task.sleep(
             for: .seconds(1)
         )
-
-        // MARK: - Real startup
-
-        AuthService.shared.startAuthStateListener()
-
-        await AuthService.shared.loadCurrentUser()
-
-        if AuthService.shared.user != nil {
-            await SyncService.shared.syncAll()
-        }
 
         // MARK: - Application ready
 

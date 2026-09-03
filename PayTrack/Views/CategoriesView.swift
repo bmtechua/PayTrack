@@ -1,21 +1,12 @@
-//
-//  CategoriesView.swift
-//  PayTrack
-//
-//  Created by bmtech on 29.06.2026.
-//
-
 import SwiftUI
 import CoreData
 import Supabase
+import Auth
 
 struct CategoriesView: View {
 
-    @Environment(\.managedObjectContext)
-    private var context
-
-    @ObservedObject
-    private var authService = AuthService.shared
+    @Environment(\.managedObjectContext) private var context
+    @ObservedObject private var authService = AuthService.shared
 
     @FetchRequest(
         sortDescriptors: [
@@ -30,97 +21,134 @@ struct CategoriesView: View {
     @State private var newCategory = ""
     @State private var showAddCategory = false
 
-    var body: some View {
+    @State private var editingCategory: Category?
+    @State private var editedCategoryName = ""
+    @State private var showEditCategory = false
 
+    private var visibleCategories: [Category] {
+        guard let userID = authService.user?.id else {
+            return categories.filter { $0.userID == nil }
+        }
+
+        return categories.filter {
+            $0.userID == userID
+        }
+    }
+
+    var body: some View {
         NavigationStack {
 
-            VStack {
+            List {
+                ForEach(visibleCategories) { category in
 
-                // MARK: - Add category
+                    HStack {
+                        Text(category.icon ?? "📌")
+                            .font(.title3)
 
-                if authService.user != nil {
+                        Text(category.name ?? "")
 
+                        Spacer()
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        startEditing(category)
+                    }
+                }
+                .onDelete { indexSet in
+                    for index in indexSet {
+                        deleteCategory(
+                            visibleCategories[index]
+                        )
+                    }
+                }
+            }
+            .navigationTitle(
+                NSLocalizedString(
+                    "categories",
+                    comment: ""
+                )
+            )
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         newCategory = ""
                         showAddCategory = true
                     } label: {
-                        Label(
-                            "add_category",
-                            systemImage: "plus"
-                        )
+                        Image(systemName: "plus")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .padding()
-                }
-
-                // MARK: - Categories
-
-                List {
-
-                    ForEach(categories) { category in
-
-                        HStack {
-                            Text(category.icon ?? "📌")
-
-                            Text(
-                                LocalizedStringKey(
-                                    category.name ?? ""
-                                )
-                            )
-                        }
-                        .deleteDisabled(category.is_default)
-                    }
-                    .onDelete(
-                        perform: deleteCategory
-                    )
                 }
             }
-            .navigationTitle("categories")
 
-            // MARK: - Add category sheet
+            // MARK: - Add category alert
 
-            .sheet(isPresented: $showAddCategory) {
+            .alert(
+                NSLocalizedString(
+                    "add_category",
+                    comment: ""
+                ),
+                isPresented: $showAddCategory
+            ) {
+                TextField(
+                    NSLocalizedString(
+                        "category_name",
+                        comment: ""
+                    ),
+                    text: $newCategory
+                )
 
-                NavigationStack {
+                Button(
+                    NSLocalizedString(
+                        "cancel",
+                        comment: ""
+                    ),
+                    role: .cancel
+                ) {}
 
-                    Form {
-
-                        TextField(
-                            "category_name",
-                            text: $newCategory
-                        )
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.sentences)
-
-                        Button {
-                            addCategory()
-                            showAddCategory = false
-                        } label: {
-                            Text("add")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .disabled(
-                            newCategory
-                                .trimmingCharacters(
-                                    in: .whitespacesAndNewlines
-                                )
-                                .isEmpty
-                        )
-                    }
-                    .navigationTitle("add_category")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-
-                        ToolbarItem(
-                            placement: .cancellationAction
-                        ) {
-                            Button("cancel") {
-                                showAddCategory = false
-                            }
-                        }
-                    }
+                Button(
+                    NSLocalizedString(
+                        "add",
+                        comment: ""
+                    )
+                ) {
+                    addCategory()
                 }
-                .presentationDetents([.medium])
+            }
+
+            // MARK: - Edit category alert
+
+            .alert(
+                NSLocalizedString(
+                    "edit_category",
+                    comment: ""
+                ),
+                isPresented: $showEditCategory
+            ) {
+                TextField(
+                    NSLocalizedString(
+                        "category_name",
+                        comment: ""
+                    ),
+                    text: $editedCategoryName
+                )
+
+                Button(
+                    NSLocalizedString(
+                        "cancel",
+                        comment: ""
+                    ),
+                    role: .cancel
+                ) {
+                    editingCategory = nil
+                }
+
+                Button(
+                    NSLocalizedString(
+                        "save",
+                        comment: ""
+                    )
+                ) {
+                    saveEditedCategory()
+                }
             }
         }
     }
@@ -138,9 +166,21 @@ struct CategoriesView: View {
             return
         }
 
-        guard let user = authService.user else {
-            AppLogger.shared.error(
-                "Cannot add category: user is not logged in"
+        let normalizedName = categoryName
+            .lowercased()
+
+        // Prevent local duplicate
+        let alreadyExists = visibleCategories.contains {
+            ($0.name ?? "")
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                .lowercased() == normalizedName
+        }
+
+        if alreadyExists {
+            AppLogger.shared.info(
+                "Category already exists: \(categoryName)"
             )
             return
         }
@@ -151,120 +191,23 @@ struct CategoriesView: View {
         category.name = categoryName
         category.icon = "📌"
         category.is_default = false
-        category.userID = user.id
-
-        AppLogger.shared.info(
-            "Category added: \(categoryName)"
-        )
-
-        save()
-
-        newCategory = ""
-
-        Task {
-            await SyncService.shared.syncAll()
-        }
-    }
-
-    // MARK: - Delete category
-
-    private func deleteCategory(offsets: IndexSet) {
-
-        guard let index = offsets.first else {
-            return
-        }
-
-        let category = categories[index]
-
-        guard !category.is_default else {
-            return
-        }
-
-        guard let categoryID = category.id else {
-            AppLogger.shared.error(
-                "Cannot delete category: category has no ID"
-            )
-            return
-        }
-
-        guard let otherCategory = categories.first(
-            where: {
-                $0.is_default &&
-                $0.name == "Other"
-            }
-        ) else {
-            AppLogger.shared.error(
-                "Cannot delete category: Other category not found"
-            )
-            return
-        }
-
-        let categoryName = category.name ?? "unknown"
-
-        // Move expenses to Other
-
-        let expenseRequest: NSFetchRequest<Expense> =
-            Expense.fetchRequest()
-
-        expenseRequest.predicate = NSPredicate(
-            format: "category == %@",
-            category
-        )
-
-        do {
-
-            let expenses =
-                try context.fetch(expenseRequest)
-
-            for expense in expenses {
-                expense.category = otherCategory
-            }
-
-            AppLogger.shared.info(
-                "Moved \(expenses.count) expenses from category \(categoryName) to Other"
-            )
-
-            // Delete local category
-
-            context.delete(category)
-
-            try context.save()
-
-            AppLogger.shared.info(
-                "Category deleted: \(categoryName)"
-            )
-
-            // Delete category from Supabase
-
-            Task {
-
-                await SyncService.shared.deleteCategory(
-                    id: categoryID,
-                    name: categoryName
-                )
-
-                await SyncService.shared.syncAll()
-            }
-
-        } catch {
-
-            AppLogger.shared.error(
-                "Failed to delete category \(categoryName): \(error.localizedDescription)"
-            )
-        }
-    }
-
-    // MARK: - Save
-
-    private func save() {
+        category.userID = authService.user?.id
 
         do {
 
             try context.save()
 
             AppLogger.shared.info(
-                "Categories changes saved successfully"
+                "Category added: \(categoryName), owner: \(category.userID?.uuidString ?? "Free")"
             )
+
+            if category.userID != nil {
+                Task {
+                    await SyncService.shared.syncOneCategory(
+                        category
+                    )
+                }
+            }
 
         } catch {
 
@@ -273,12 +216,167 @@ struct CategoriesView: View {
             )
         }
     }
-}
 
-#Preview {
-    CategoriesView()
-        .environment(
-            \.managedObjectContext,
-            PersistenceController.preview.container.viewContext
+    // MARK: - Start editing
+
+    private func startEditing(_ category: Category) {
+
+        // Default categories cannot be renamed
+        guard !category.is_default else {
+            return
+        }
+
+        editingCategory = category
+        editedCategoryName = category.name ?? ""
+        showEditCategory = true
+    }
+
+    // MARK: - Save edited category
+
+    private func saveEditedCategory() {
+
+        guard let category = editingCategory else {
+            return
+        }
+
+        let categoryName = editedCategoryName
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+        guard !categoryName.isEmpty else {
+            return
+        }
+
+        let normalizedName = categoryName
+            .lowercased()
+
+        // Prevent duplicate name
+        let alreadyExists = visibleCategories.contains {
+            guard $0.objectID != category.objectID else {
+                return false
+            }
+
+            return ($0.name ?? "")
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                .lowercased() == normalizedName
+        }
+
+        if alreadyExists {
+            AppLogger.shared.info(
+                "Category already exists: \(categoryName)"
+            )
+            return
+        }
+
+        category.name = categoryName
+
+        do {
+
+            try context.save()
+
+            AppLogger.shared.info(
+                "Category updated: \(categoryName)"
+            )
+
+            if category.userID != nil {
+                Task {
+
+                    AppLogger.shared.info(
+                        "Auto category update sync started"
+                    )
+
+                    await SyncService.shared.syncOneCategory(
+                        category
+                    )
+                }
+            }
+
+            editingCategory = nil
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Failed to update category: \(error.localizedDescription)"
+            )
+        }
+    }
+
+    // MARK: - Delete category
+
+    private func deleteCategory(
+        _ category: Category
+    ) {
+
+        guard !category.is_default else {
+
+            AppLogger.shared.info(
+                "Default category cannot be deleted: \(category.name ?? "")"
+            )
+
+            return
+        }
+
+        let ownerID = category.userID
+        let categoryID = category.id
+        let categoryName = category.name ?? "No name"
+
+        // Find "Other" in the same ownership scope
+        let otherCategory = visibleCategories.first {
+            ($0.name ?? "") == "Other"
+        }
+
+        let request: NSFetchRequest<Expense> =
+            Expense.fetchRequest()
+
+        request.predicate = NSPredicate(
+            format: "category == %@",
+            category
         )
+
+        do {
+
+            let expenses =
+                try context.fetch(request)
+
+            for expense in expenses {
+
+                if let otherCategory {
+                    expense.category = otherCategory
+                    expense.userID = ownerID
+                }
+            }
+
+            context.delete(category)
+
+            try context.save()
+
+            AppLogger.shared.info(
+                "Category deleted locally: \(categoryName)"
+            )
+
+            if let ownerID {
+
+                Task {
+
+                    await SyncService.shared.deleteCategory(
+                        id: categoryID ?? UUID(),
+                        name: categoryName
+                    )
+                }
+
+                AppLogger.shared.info(
+                    "Premium category delete sync scheduled for user: \(ownerID)"
+                )
+            }
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Failed to delete category: \(error.localizedDescription)"
+            )
+        }
+    }
 }

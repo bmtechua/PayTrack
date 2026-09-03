@@ -6,6 +6,7 @@
 import SwiftUI
 import CoreData
 import Supabase
+import Auth
 
 struct EditExpenseView: View {
 
@@ -14,6 +15,9 @@ struct EditExpenseView: View {
 
     @Environment(\.dismiss)
     private var dismiss
+    
+    @ObservedObject
+    private var authService = AuthService.shared
 
     @ObservedObject
     var expense: Expense
@@ -27,6 +31,14 @@ struct EditExpenseView: View {
         ]
     )
     private var categories: FetchedResults<Category>
+
+    private var visibleCategories: [Category] {
+        guard let userID = authService.user?.id else {
+            return categories.filter { $0.userID == nil }
+        }
+
+        return categories.filter { $0.userID == userID }
+    }
 
     @State
     private var title = ""
@@ -72,7 +84,7 @@ struct EditExpenseView: View {
 
                 Section("category") {
 
-                    if categories.isEmpty {
+                    if visibleCategories.isEmpty {
 
                         Text("create_category_first")
                             .foregroundStyle(.secondary)
@@ -87,7 +99,7 @@ struct EditExpenseView: View {
                             Text("no_category")
                                 .tag(UUID?.none)
 
-                            ForEach(categories) { category in
+                            ForEach(visibleCategories) { category in
 
                                 if let categoryID = category.id {
 
@@ -156,10 +168,18 @@ struct EditExpenseView: View {
 
             request.fetchLimit = 1
 
-            request.predicate = NSPredicate(
-                format: "id == %@",
-                categoryID as CVarArg
-            )
+            if let userID = authService.user?.id {
+                request.predicate = NSPredicate(
+                    format: "id == %@ AND userID == %@",
+                    categoryID as CVarArg,
+                    userID as CVarArg
+                )
+            } else {
+                request.predicate = NSPredicate(
+                    format: "id == %@ AND userID == nil",
+                    categoryID as CVarArg
+                )
+            }
 
             expense.category =
                 try? context.fetch(request).first
@@ -177,26 +197,24 @@ struct EditExpenseView: View {
                 "Expense updated: \(title), amount: \(value)"
             )
 
-            Task {
+            if expense.userID != nil {
+                Task {
+                    do {
+                        _ = try await
+                            SupabaseManager.shared.client.auth.session
 
-                do {
+                        AppLogger.shared.info(
+                            "Auto update sync started"
+                        )
 
-                    _ = try await
-                        SupabaseManager.shared.client.auth.session
-
-                    AppLogger.shared.info(
-                        "Auto update sync started"
-                    )
-
-                    await SyncService.shared.syncOneExpense(
-                        expense
-                    )
-
-                } catch {
-
-                    AppLogger.shared.info(
-                        "Auto update sync skipped: no authenticated user"
-                    )
+                        await SyncService.shared.syncOneExpense(
+                            expense
+                        )
+                    } catch {
+                        AppLogger.shared.info(
+                            "Auto update sync skipped: no authenticated user"
+                        )
+                    }
                 }
             }
 
