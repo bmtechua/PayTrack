@@ -6,6 +6,7 @@ import Auth
 struct CategoriesView: View {
 
     @Environment(\.managedObjectContext) private var context
+
     @ObservedObject private var authService = AuthService.shared
 
     @FetchRequest(
@@ -26,6 +27,7 @@ struct CategoriesView: View {
     @State private var showEditCategory = false
 
     private var visibleCategories: [Category] {
+
         guard let userID = authService.user?.id else {
             return categories.filter { $0.userID == nil }
         }
@@ -36,12 +38,15 @@ struct CategoriesView: View {
     }
 
     var body: some View {
+
         NavigationStack {
 
             List {
+
                 ForEach(visibleCategories) { category in
 
                     HStack {
+
                         Text(category.icon ?? "📌")
                             .font(.title3)
 
@@ -53,27 +58,51 @@ struct CategoriesView: View {
                     .onTapGesture {
                         startEditing(category)
                     }
-                }
-                .onDelete { indexSet in
-                    for index in indexSet {
-                        deleteCategory(
-                            visibleCategories[index]
-                        )
+                    .swipeActions(
+                        edge: .trailing,
+                        allowsFullSwipe: false
+                    ) {
+
+                        // Default categories cannot be deleted
+                        if !category.is_default {
+
+                            Button(role: .destructive) {
+
+                                deleteCategory(category)
+
+                            } label: {
+
+                                Label(
+                                    NSLocalizedString(
+                                        "delete",
+                                        comment: ""
+                                    ),
+                                    systemImage: "trash"
+                                )
+                            }
+                        }
                     }
                 }
             }
+
             .navigationTitle(
                 NSLocalizedString(
                     "categories",
                     comment: ""
                 )
             )
+
             .toolbar {
+
                 ToolbarItem(placement: .topBarTrailing) {
+
                     Button {
+
                         newCategory = ""
                         showAddCategory = true
+
                     } label: {
+
                         Image(systemName: "plus")
                     }
                 }
@@ -88,6 +117,7 @@ struct CategoriesView: View {
                 ),
                 isPresented: $showAddCategory
             ) {
+
                 TextField(
                     NSLocalizedString(
                         "category_name",
@@ -110,8 +140,10 @@ struct CategoriesView: View {
                         comment: ""
                     )
                 ) {
+
                     addCategory()
                 }
+
             }
 
             // MARK: - Edit category alert
@@ -123,6 +155,7 @@ struct CategoriesView: View {
                 ),
                 isPresented: $showEditCategory
             ) {
+
                 TextField(
                     NSLocalizedString(
                         "category_name",
@@ -138,6 +171,7 @@ struct CategoriesView: View {
                     ),
                     role: .cancel
                 ) {
+
                     editingCategory = nil
                 }
 
@@ -147,6 +181,7 @@ struct CategoriesView: View {
                         comment: ""
                     )
                 ) {
+
                     saveEditedCategory()
                 }
             }
@@ -170,7 +205,9 @@ struct CategoriesView: View {
             .lowercased()
 
         // Prevent local duplicate
+
         let alreadyExists = visibleCategories.contains {
+
             ($0.name ?? "")
                 .trimmingCharacters(
                     in: .whitespacesAndNewlines
@@ -179,9 +216,11 @@ struct CategoriesView: View {
         }
 
         if alreadyExists {
+
             AppLogger.shared.info(
                 "Category already exists: \(categoryName)"
             )
+
             return
         }
 
@@ -202,7 +241,9 @@ struct CategoriesView: View {
             )
 
             if category.userID != nil {
+
                 Task {
+
                     await SyncService.shared.syncOneCategory(
                         category
                     )
@@ -219,9 +260,12 @@ struct CategoriesView: View {
 
     // MARK: - Start editing
 
-    private func startEditing(_ category: Category) {
+    private func startEditing(
+        _ category: Category
+    ) {
 
         // Default categories cannot be renamed
+
         guard !category.is_default else {
             return
         }
@@ -252,7 +296,9 @@ struct CategoriesView: View {
             .lowercased()
 
         // Prevent duplicate name
+
         let alreadyExists = visibleCategories.contains {
+
             guard $0.objectID != category.objectID else {
                 return false
             }
@@ -265,9 +311,11 @@ struct CategoriesView: View {
         }
 
         if alreadyExists {
+
             AppLogger.shared.info(
                 "Category already exists: \(categoryName)"
             )
+
             return
         }
 
@@ -282,6 +330,7 @@ struct CategoriesView: View {
             )
 
             if category.userID != nil {
+
                 Task {
 
                     AppLogger.shared.info(
@@ -310,6 +359,8 @@ struct CategoriesView: View {
         _ category: Category
     ) {
 
+        // Default categories cannot be deleted
+
         guard !category.is_default else {
 
             AppLogger.shared.info(
@@ -324,6 +375,7 @@ struct CategoriesView: View {
         let categoryName = category.name ?? "No name"
 
         // Find "Other" in the same ownership scope
+
         let otherCategory = visibleCategories.first {
             ($0.name ?? "") == "Other"
         }
@@ -344,6 +396,7 @@ struct CategoriesView: View {
             for expense in expenses {
 
                 if let otherCategory {
+
                     expense.category = otherCategory
                     expense.userID = ownerID
                 }
@@ -380,3 +433,4 @@ struct CategoriesView: View {
         }
     }
 }
+
