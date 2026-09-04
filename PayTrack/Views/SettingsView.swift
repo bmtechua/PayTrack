@@ -81,6 +81,9 @@ struct SettingsView: View {
                                 AppLogger.shared.info(
                                     "Budget changed: \(budgetBeforeEditing) → \(monthlyBudget)"
                                 )
+                                Task {
+                                           await SyncService.shared.syncProfileSettings()
+                                       }
                             }
                         }
                     )
@@ -96,20 +99,21 @@ struct SettingsView: View {
                         "currency",
                         selection: $currency
                     ) {
-
                         Text("currency_uah")
                             .tag("UAH")
-
                         Text("currency_eur")
                             .tag("EUR")
-
                         Text("currency_usd")
                             .tag("USD")
-                        
                         Text("currency_cad")
-                                    .tag("CAD")
+                            .tag("CAD")
                         Text("currency_aud")
                             .tag("AUD")
+                    }
+                    .onChange(of: currency) {
+                        Task {
+                            await SyncService.shared.syncProfileSettings()
+                        }
                     }
                 }
 

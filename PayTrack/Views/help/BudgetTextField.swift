@@ -14,12 +14,34 @@ struct BudgetTextField: UIViewRepresentable {
 
     let onEditingBegan: () -> Void
     let onDone: () -> Void
+    
+    private func localizedDone() -> String {
+        let language =
+            UserDefaults.standard.string(forKey: "language") ?? "uk"
 
+        guard
+            let path = Bundle.main.path(
+                forResource: language,
+                ofType: "lproj"
+            ),
+            let bundle = Bundle(path: path)
+        else {
+            return NSLocalizedString(
+                "done",
+                comment: ""
+            )
+        }
+
+        return NSLocalizedString(
+            "done",
+            bundle: bundle,
+            comment: ""
+        )
+    }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
-
 
     func makeUIView(
         context: Context
@@ -29,50 +51,36 @@ struct BudgetTextField: UIViewRepresentable {
 
         textField.keyboardType = .decimalPad
         textField.delegate = context.coordinator
+        textField.text = context.coordinator.formattedValue()
 
-        textField.text =
-            context.coordinator.formattedValue()
+        textField.borderStyle = .none
 
+        // MARK: - Done button
+
+        let doneButton = UIButton(type: .system)
+
+        doneButton.setTitle(
+            localizedDone(),
+            for: .normal
+        )
+
+        doneButton.addTarget(
+            context.coordinator,
+            action: #selector(
+                Coordinator.doneTapped
+            ),
+            for: .touchUpInside
+        )
+
+        doneButton.sizeToFit()
+
+        textField.rightView = doneButton
+        textField.rightViewMode = .whileEditing
 
         context.coordinator.textField = textField
 
-
-        let toolbar = UIToolbar()
-        toolbar.sizeToFit()
-
-
-        let flexibleSpace = UIBarButtonItem(
-            barButtonSystemItem: .flexibleSpace,
-            target: nil,
-            action: nil
-        )
-
-
-        let doneButton = UIBarButtonItem(
-            title: NSLocalizedString(
-                "done",
-                comment: ""
-            ),
-            style: .prominent,
-            target: context.coordinator,
-            action: #selector(
-                Coordinator.doneTapped
-            )
-        )
-
-
-        toolbar.items = [
-            flexibleSpace,
-            doneButton
-        ]
-
-
-        textField.inputAccessoryView = toolbar
-
-
         return textField
     }
-
 
     func updateUIView(
         _ textField: UITextField,
@@ -82,12 +90,21 @@ struct BudgetTextField: UIViewRepresentable {
         context.coordinator.parent = self
 
         if !textField.isFirstResponder {
-
             textField.text =
                 context.coordinator.formattedValue()
         }
-    }
 
+        if let button = textField.rightView as? UIButton {
+            button.setTitle(
+                localizedDone(),
+                for: .normal
+            )
+            button.sizeToFit()
+        }
+    }
+    
+
+    // MARK: - Coordinator
 
     final class Coordinator:
         NSObject,
@@ -97,11 +114,9 @@ struct BudgetTextField: UIViewRepresentable {
 
         weak var textField: UITextField?
 
-
         init(_ parent: BudgetTextField) {
             self.parent = parent
         }
-
 
         func formattedValue() -> String {
 
@@ -118,14 +133,11 @@ struct BudgetTextField: UIViewRepresentable {
             ) ?? ""
         }
 
-
         func textFieldDidBeginEditing(
             _ textField: UITextField
         ) {
-
             parent.onEditingBegan()
         }
-
 
         @objc
         func doneTapped() {
@@ -137,14 +149,11 @@ struct BudgetTextField: UIViewRepresentable {
             parent.onDone()
         }
 
-
         func textFieldDidEndEditing(
             _ textField: UITextField
         ) {
-
             updateValue()
         }
-
 
         private func updateValue() {
 
@@ -154,17 +163,14 @@ struct BudgetTextField: UIViewRepresentable {
                 return
             }
 
-
             let formatter = NumberFormatter()
 
             formatter.numberStyle = .decimal
             formatter.locale = Locale.current
 
-
             if let number = formatter.number(
                 from: text
             ) {
-
                 parent.value =
                     number.doubleValue
             }
