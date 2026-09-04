@@ -94,6 +94,8 @@ final class AuthService: ObservableObject {
                 await SyncService.shared.startCategoriesRealtime()
 
                 await SyncService.shared.startExpensesRealtime()
+                
+                await SyncService.shared.syncAll()
             }
 
         } catch {

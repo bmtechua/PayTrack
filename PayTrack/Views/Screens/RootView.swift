@@ -59,6 +59,9 @@ struct RootView: View {
         // Core Data is created only after WelcomeView.
         persistenceController =
             PersistenceController.shared
+        
+        // Load current authenticated user
+           await AuthService.shared.loadCurrentUser()
 
         try? await Task.sleep(
             for: .seconds(1)
