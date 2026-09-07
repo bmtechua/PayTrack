@@ -23,6 +23,9 @@ final class AuthService: ObservableObject {
 
     private var authStateTask: Task<Void, Never>?
 
+    // Prevent duplicate sync after manual login.
+    private var hasCompletedAuthSync = false
+
     // MARK: - Auth state listener
 
     func startAuthStateListener() {
@@ -65,6 +68,7 @@ final class AuthService: ObservableObject {
 
                     self.user = nil
                     self.isPasswordRecovery = false
+                    self.hasCompletedAuthSync = false
 
                 default:
                     break
@@ -96,8 +100,17 @@ final class AuthService: ObservableObject {
                 await SyncService.shared.startCategoriesRealtime()
 
                 await SyncService.shared.startExpensesRealtime()
-                
-                await SyncService.shared.syncAll()
+
+                if !hasCompletedAuthSync {
+
+                    // Load settings from Supabase first.
+                    await SyncService.shared.loadProfileSettings()
+
+                    // Then sync categories and expenses.
+                    await SyncService.shared.syncAll()
+
+                    hasCompletedAuthSync = true
+                }
             }
 
         } catch {
@@ -148,7 +161,14 @@ final class AuthService: ObservableObject {
             "Registration sync started"
         )
 
+        // First registration:
+        // upload local settings to Supabase first.
+        await SyncService.shared.syncProfileSettings()
+
+        // Then sync categories and expenses.
         await SyncService.shared.syncAll()
+
+        hasCompletedAuthSync = true
     }
 
     // MARK: - Sign in
@@ -193,7 +213,14 @@ final class AuthService: ObservableObject {
             "Login sync started"
         )
 
+        // Existing user:
+        // load settings from Supabase first.
+        await SyncService.shared.loadProfileSettings()
+
+        // Then sync categories and expenses.
         await SyncService.shared.syncAll()
+
+        hasCompletedAuthSync = true
     }
 
     // MARK: - Change password
@@ -229,6 +256,7 @@ final class AuthService: ObservableObject {
         try await client.auth.signOut()
 
         user = nil
+        hasCompletedAuthSync = false
 
         AppLogger.shared.info(
             "Logout successful. Premium local data preserved."
