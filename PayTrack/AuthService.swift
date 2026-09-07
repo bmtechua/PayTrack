@@ -244,9 +244,15 @@ final class AuthService: ObservableObject {
 
     func signOut() async throws {
 
+        AppLogger.shared.info(
+            "Logout attempt"
+        )
+
+        // Cancel any running full sync.
+        SyncService.shared.cancelFullSync()
+
         // Stop Premium realtime.
         await SyncService.shared.stopCategoriesRealtime()
-
         await SyncService.shared.stopExpensesRealtime()
 
         // Remove only active Premium session state.
@@ -256,7 +262,6 @@ final class AuthService: ObservableObject {
         try await client.auth.signOut()
 
         user = nil
-        hasCompletedAuthSync = false
 
         AppLogger.shared.info(
             "Logout successful. Premium local data preserved."
@@ -264,6 +269,7 @@ final class AuthService: ObservableObject {
 
         AppLogger.shared.setUser(nil)
     }
+
 
     // MARK: - Reset password
 

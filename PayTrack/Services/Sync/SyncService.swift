@@ -19,6 +19,20 @@ final class SyncService {
     
     var categoriesChannel: RealtimeChannelV2?
     var expensesChannel: RealtimeChannelV2?
+    
+    var fullSyncTask: Task<Void, Never>?
+    
+    // MARK: - Cancel full sync
+
+    func cancelFullSync() {
+
+        fullSyncTask?.cancel()
+        fullSyncTask = nil
+
+        AppLogger.shared.info(
+            "Full sync cancelled"
+        )
+    }
 
     private init() {
     }
@@ -66,3 +80,4 @@ final class SyncService {
         }
     }
 }
+

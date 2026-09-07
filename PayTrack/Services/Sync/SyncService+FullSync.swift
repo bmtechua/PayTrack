@@ -69,8 +69,7 @@ extension SyncService {
             return nil
         }
 
-        let request:
-            NSFetchRequest<Category> =
+        let request: NSFetchRequest<Category> =
             Category.fetchRequest()
 
         request.fetchLimit = 1
@@ -145,8 +144,7 @@ extension SyncService {
             return
         }
 
-        let request:
-            NSFetchRequest<Expense> =
+        let request: NSFetchRequest<Expense> =
             Expense.fetchRequest()
 
         request.fetchLimit = 1
@@ -241,8 +239,8 @@ extension SyncService {
 
         if case let .string(categoryIDString) =
             remoteExpense["category_id"],
-           let categoryID =
-            UUID(uuidString: categoryIDString) {
+            let categoryID =
+                UUID(uuidString: categoryIDString) {
 
             expense.category =
                 categoriesByID[categoryID]
@@ -262,14 +260,17 @@ extension SyncService {
     private func migrateFreeCategories(
         to userID: UUID
     ) throws {
+
         let freeRequest: NSFetchRequest<Category> =
             Category.fetchRequest()
 
-        freeRequest.predicate = NSPredicate(
-            format: "userID == nil"
-        )
+        freeRequest.predicate =
+            NSPredicate(
+                format: "userID == nil"
+            )
 
-        let freeCategories = try context.fetch(freeRequest)
+        let freeCategories =
+            try context.fetch(freeRequest)
 
         guard !freeCategories.isEmpty else {
             return
@@ -278,34 +279,123 @@ extension SyncService {
         let premiumRequest: NSFetchRequest<Category> =
             Category.fetchRequest()
 
-        premiumRequest.predicate = NSPredicate(
-            format: "userID == %@",
-            userID as CVarArg
-        )
+        premiumRequest.predicate =
+            NSPredicate(
+                format: "userID == %@",
+                userID as CVarArg
+            )
 
         var premiumCategories =
             try context.fetch(premiumRequest)
 
         for freeCategory in freeCategories {
 
-            guard let freeName = freeCategory.name?
-                .trimmingCharacters(
-                    in: .whitespacesAndNewlines
-                ),
+            guard
+                let freeName =
+                    freeCategory.name?
+                        .trimmingCharacters(
+                            in: .whitespacesAndNewlines
+                        ),
                 !freeName.isEmpty
             else {
                 continue
             }
 
             // MARK: - Free default category
-            //
-            // Free default categories must remain Free.
-            // We only create/use a Premium copy for the user's data.
 
             if freeCategory.is_default {
 
-                let premiumCategory = premiumCategories.first {
-                    guard let premiumName = $0.name else {
+                let premiumCategory =
+                    premiumCategories.first {
+
+                        guard
+                            let premiumName = $0.name
+                        else {
+                            return false
+                        }
+
+                        return premiumName
+                            .trimmingCharacters(
+                                in: .whitespacesAndNewlines
+                            )
+                            .caseInsensitiveCompare(
+                                freeName
+                            )
+                            == .orderedSame
+                    }
+
+                let targetCategory: Category
+
+                if let premiumCategory {
+
+                    targetCategory =
+                        premiumCategory
+
+                } else {
+
+                    let newPremiumCategory =
+                        Category(context: context)
+
+                    newPremiumCategory.id =
+                        UUID()
+
+                    newPremiumCategory.name =
+                        freeCategory.name
+
+                    newPremiumCategory.icon =
+                        freeCategory.icon
+
+                    newPremiumCategory.is_default =
+                        freeCategory.is_default
+
+                    newPremiumCategory.userID =
+                        userID
+
+                    premiumCategories.append(
+                        newPremiumCategory
+                    )
+
+                    targetCategory =
+                        newPremiumCategory
+                }
+
+                let expenseRequest:
+                    NSFetchRequest<Expense> =
+                    Expense.fetchRequest()
+
+                expenseRequest.predicate =
+                    NSPredicate(
+                        format: "category == %@",
+                        freeCategory
+                    )
+
+                let expenses =
+                    try context.fetch(
+                        expenseRequest
+                    )
+
+                for expense in expenses {
+
+                    expense.category =
+                        targetCategory
+
+                    expense.userID =
+                        userID
+                }
+
+                // Free category remains untouched.
+
+                continue
+            }
+
+            // MARK: - Existing migration for non-default categories
+
+            let premiumCategory =
+                premiumCategories.first {
+
+                    guard
+                        let premiumName = $0.name
+                    else {
                         return false
                     }
 
@@ -313,92 +403,46 @@ extension SyncService {
                         .trimmingCharacters(
                             in: .whitespacesAndNewlines
                         )
-                        .caseInsensitiveCompare(freeName)
+                        .caseInsensitiveCompare(
+                            freeName
+                        )
                         == .orderedSame
                 }
 
-                let targetCategory: Category
-
-                if let premiumCategory {
-                    targetCategory = premiumCategory
-                } else {
-                    let newPremiumCategory =
-                        Category(context: context)
-
-                    newPremiumCategory.id = UUID()
-                    newPremiumCategory.name = freeCategory.name
-                    newPremiumCategory.icon = freeCategory.icon
-                    newPremiumCategory.is_default =
-                        freeCategory.is_default
-                    newPremiumCategory.userID = userID
-
-                    premiumCategories.append(
-                        newPremiumCategory
-                    )
-
-                    targetCategory = newPremiumCategory
-                }
-
-                let expenseRequest: NSFetchRequest<Expense> =
-                    Expense.fetchRequest()
-
-                expenseRequest.predicate = NSPredicate(
-                    format: "category == %@",
-                    freeCategory
-                )
-
-                let expenses =
-                    try context.fetch(expenseRequest)
-
-                for expense in expenses {
-                    expense.category = targetCategory
-                    expense.userID = userID
-                }
-
-                // IMPORTANT:
-                // Do NOT delete or modify freeCategory.
-                // It remains userID == nil.
-
-                continue
-            }
-
-            // MARK: - Existing migration for non-default categories
-
-            let premiumCategory = premiumCategories.first {
-                guard let premiumName = $0.name else {
-                    return false
-                }
-
-                return premiumName
-                    .trimmingCharacters(
-                        in: .whitespacesAndNewlines
-                    )
-                    .caseInsensitiveCompare(freeName)
-                    == .orderedSame
-            }
-
             if let premiumCategory {
 
-                let expenseRequest: NSFetchRequest<Expense> =
+                let expenseRequest:
+                    NSFetchRequest<Expense> =
                     Expense.fetchRequest()
 
-                expenseRequest.predicate = NSPredicate(
-                    format: "category == %@",
+                expenseRequest.predicate =
+                    NSPredicate(
+                        format: "category == %@",
+                        freeCategory
+                    )
+
+                let expenses =
+                    try context.fetch(
+                        expenseRequest
+                    )
+
+                for expense in expenses {
+
+                    expense.category =
+                        premiumCategory
+
+                    expense.userID =
+                        userID
+                }
+
+                context.delete(
                     freeCategory
                 )
 
-                let expenses =
-                    try context.fetch(expenseRequest)
-
-                for expense in expenses {
-                    expense.category = premiumCategory
-                    expense.userID = userID
-                }
-
-                context.delete(freeCategory)
-
             } else {
-                freeCategory.userID = userID
+
+                freeCategory.userID =
+                    userID
             }
         }
 
@@ -427,14 +471,11 @@ extension SyncService {
         let freeExpenses =
             try context.fetch(request)
 
-        guard
-            !freeExpenses.isEmpty
-        else {
+        guard !freeExpenses.isEmpty else {
             return
         }
 
-        for expense
-        in freeExpenses {
+        for expense in freeExpenses {
 
             expense.userID =
                 userID
@@ -485,19 +526,11 @@ extension SyncService {
                     .lowercased()
             }
 
-        for (_, duplicates)
-        in grouped {
+        for (_, duplicates) in grouped {
 
-            guard
-                duplicates.count > 1
-            else {
+            guard duplicates.count > 1 else {
                 continue
             }
-
-            // Prefer:
-            // 1. default category
-            // 2. category with a real icon
-            // 3. stable ID
 
             let primary =
                 duplicates
@@ -558,8 +591,7 @@ extension SyncService {
                         expenseRequest
                     )
 
-                for expense
-                in expenses {
+                for expense in expenses {
 
                     expense.category =
                         primary
@@ -583,7 +615,6 @@ extension SyncService {
         }
 
         if context.hasChanges {
-
             try context.save()
         }
 
@@ -611,8 +642,7 @@ extension SyncService {
         let categories =
             try context.fetch(request)
 
-        for category
-        in categories {
+        for category in categories {
 
             await syncOneCategory(
                 category
@@ -639,8 +669,7 @@ extension SyncService {
         let expenses =
             try context.fetch(request)
 
-        for expense
-        in expenses {
+        for expense in expenses {
 
             await syncOneExpense(
                 expense
@@ -671,8 +700,7 @@ extension SyncService {
             [UUID: Category] =
             [:]
 
-        for category
-        in categories {
+        for category in categories {
 
             if let id =
                 category.id {
@@ -688,6 +716,28 @@ extension SyncService {
     // MARK: - Full sync
 
     func syncAll() async {
+
+        fullSyncTask?.cancel()
+
+        let task =
+            Task { @MainActor [weak self] in
+
+                guard let self else {
+                    return
+                }
+
+                await self.performFullSync()
+            }
+
+        fullSyncTask =
+            task
+
+        await task.value
+    }
+
+    // MARK: - Perform full sync
+
+    private func performFullSync() async {
 
         do {
 
@@ -707,6 +757,8 @@ extension SyncService {
                     for: userID
                 )
 
+            try Task.checkCancellation()
+
             for remoteCategory
             in remoteCategories {
 
@@ -718,6 +770,8 @@ extension SyncService {
 
             try context.save()
 
+            try Task.checkCancellation()
+
             // -------------------------------------------------
             // 2. Migrate Free categories.
             // -------------------------------------------------
@@ -725,6 +779,8 @@ extension SyncService {
             try migrateFreeCategories(
                 to: userID
             )
+
+            try Task.checkCancellation()
 
             // -------------------------------------------------
             // 3. Migrate Free expenses.
@@ -734,15 +790,17 @@ extension SyncService {
                 to: userID
             )
 
+            try Task.checkCancellation()
+
             // -------------------------------------------------
-            // 4. IMPORTANT:
-            // Remove old local Premium duplicates
-            // BEFORE uploading anything.
+            // 4. Remove old local Premium duplicates.
             // -------------------------------------------------
 
             try removeDuplicateLocalCategories(
                 for: userID
             )
+
+            try Task.checkCancellation()
 
             // -------------------------------------------------
             // 5. Upload unique Premium categories.
@@ -752,6 +810,8 @@ extension SyncService {
                 for: userID
             )
 
+            try Task.checkCancellation()
+
             // -------------------------------------------------
             // 6. Upload Premium expenses.
             // -------------------------------------------------
@@ -759,6 +819,8 @@ extension SyncService {
             try await uploadLocalExpenses(
                 for: userID
             )
+
+            try Task.checkCancellation()
 
             // -------------------------------------------------
             // 7. Download Premium expenses.
@@ -769,6 +831,8 @@ extension SyncService {
                     for: userID
                 )
 
+            try Task.checkCancellation()
+
             // -------------------------------------------------
             // 8. Build category map.
             // -------------------------------------------------
@@ -778,12 +842,16 @@ extension SyncService {
                     for: userID
                 )
 
+            try Task.checkCancellation()
+
             // -------------------------------------------------
             // 9. Merge remote expenses.
             // -------------------------------------------------
 
             for remoteExpense
             in remoteExpenses {
+
+                try Task.checkCancellation()
 
                 try mergeRemoteExpense(
                     remoteExpense,
@@ -797,6 +865,12 @@ extension SyncService {
 
             AppLogger.shared.info(
                 "Full sync completed: \(categoriesByID.count) categories, \(remoteExpenses.count) remote expenses"
+            )
+
+        } catch is CancellationError {
+
+            AppLogger.shared.info(
+                "Full sync cancelled"
             )
 
         } catch {
