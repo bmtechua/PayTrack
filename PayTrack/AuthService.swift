@@ -87,6 +87,8 @@ final class AuthService: ObservableObject {
 
             if let userID = user?.id {
 
+                AppLogger.shared.setUser(userID)
+
                 await SyncService.shared.prepareForUser(
                     userID
                 )
@@ -125,6 +127,10 @@ final class AuthService: ObservableObject {
             )
 
         user = response.user
+
+        AppLogger.shared.setUser(
+            response.user.id
+        )
 
         AppLogger.shared.info(
             "Registration successful: \(user?.email ?? cleanEmail)"
@@ -166,6 +172,10 @@ final class AuthService: ObservableObject {
             )
 
         user = session.user
+
+        AppLogger.shared.setUser(
+            session.user.id
+        )
 
         AppLogger.shared.info(
             "Login successful: \(user?.email ?? cleanEmail)"
@@ -223,6 +233,8 @@ final class AuthService: ObservableObject {
         AppLogger.shared.info(
             "Logout successful. Premium local data preserved."
         )
+
+        AppLogger.shared.setUser(nil)
     }
 
     // MARK: - Reset password

@@ -262,123 +262,150 @@ extension SyncService {
     private func migrateFreeCategories(
         to userID: UUID
     ) throws {
-
-        let freeRequest:
-            NSFetchRequest<Category> =
+        let freeRequest: NSFetchRequest<Category> =
             Category.fetchRequest()
 
-        freeRequest.predicate =
-            NSPredicate(
-                format: "userID == nil"
-            )
+        freeRequest.predicate = NSPredicate(
+            format: "userID == nil"
+        )
 
-        let freeCategories =
-            try context.fetch(freeRequest)
+        let freeCategories = try context.fetch(freeRequest)
 
-        guard
-            !freeCategories.isEmpty
-        else {
+        guard !freeCategories.isEmpty else {
             return
         }
 
-        let premiumRequest:
-            NSFetchRequest<Category> =
+        let premiumRequest: NSFetchRequest<Category> =
             Category.fetchRequest()
 
-        premiumRequest.predicate =
-            NSPredicate(
-                format: "userID == %@",
-                userID as CVarArg
-            )
+        premiumRequest.predicate = NSPredicate(
+            format: "userID == %@",
+            userID as CVarArg
+        )
 
-        let premiumCategories =
-            try context.fetch(
-                premiumRequest
-            )
+        var premiumCategories =
+            try context.fetch(premiumRequest)
 
-        for freeCategory
-        in freeCategories {
+        for freeCategory in freeCategories {
 
-            guard
-                let freeName =
-                    freeCategory.name?
-                    .trimmingCharacters(
-                        in: .whitespacesAndNewlines
-                    ),
+            guard let freeName = freeCategory.name?
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                ),
                 !freeName.isEmpty
             else {
+                continue
+            }
 
-                freeCategory.userID =
-                    userID
+            // MARK: - Free default category
+            //
+            // Free default categories must remain Free.
+            // We only create/use a Premium copy for the user's data.
+
+            if freeCategory.is_default {
+
+                let premiumCategory = premiumCategories.first {
+                    guard let premiumName = $0.name else {
+                        return false
+                    }
+
+                    return premiumName
+                        .trimmingCharacters(
+                            in: .whitespacesAndNewlines
+                        )
+                        .caseInsensitiveCompare(freeName)
+                        == .orderedSame
+                }
+
+                let targetCategory: Category
+
+                if let premiumCategory {
+                    targetCategory = premiumCategory
+                } else {
+                    let newPremiumCategory =
+                        Category(context: context)
+
+                    newPremiumCategory.id = UUID()
+                    newPremiumCategory.name = freeCategory.name
+                    newPremiumCategory.icon = freeCategory.icon
+                    newPremiumCategory.is_default =
+                        freeCategory.is_default
+                    newPremiumCategory.userID = userID
+
+                    premiumCategories.append(
+                        newPremiumCategory
+                    )
+
+                    targetCategory = newPremiumCategory
+                }
+
+                let expenseRequest: NSFetchRequest<Expense> =
+                    Expense.fetchRequest()
+
+                expenseRequest.predicate = NSPredicate(
+                    format: "category == %@",
+                    freeCategory
+                )
+
+                let expenses =
+                    try context.fetch(expenseRequest)
+
+                for expense in expenses {
+                    expense.category = targetCategory
+                    expense.userID = userID
+                }
+
+                // IMPORTANT:
+                // Do NOT delete or modify freeCategory.
+                // It remains userID == nil.
 
                 continue
             }
 
-            // Find existing Premium category
-            // with the same name.
-            if let premiumCategory =
-                premiumCategories.first(
-                    where: {
+            // MARK: - Existing migration for non-default categories
 
-                        guard
-                            let premiumName =
-                                $0.name
-                        else {
-                            return false
-                        }
-
-                        return premiumName
-                            .trimmingCharacters(
-                                in: .whitespacesAndNewlines
-                            )
-                            .caseInsensitiveCompare(
-                                freeName
-                            ) == .orderedSame
-                    }
-                ) {
-
-                let expenseRequest:
-                    NSFetchRequest<Expense> =
-                    Expense.fetchRequest()
-
-                expenseRequest.predicate =
-                    NSPredicate(
-                        format: "category == %@",
-                        freeCategory
-                    )
-
-                let expenses =
-                    try context.fetch(
-                        expenseRequest
-                    )
-
-                for expense
-                in expenses {
-
-                    expense.category =
-                        premiumCategory
-
-                    expense.userID =
-                        userID
+            let premiumCategory = premiumCategories.first {
+                guard let premiumName = $0.name else {
+                    return false
                 }
 
-                context.delete(
+                return premiumName
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )
+                    .caseInsensitiveCompare(freeName)
+                    == .orderedSame
+            }
+
+            if let premiumCategory {
+
+                let expenseRequest: NSFetchRequest<Expense> =
+                    Expense.fetchRequest()
+
+                expenseRequest.predicate = NSPredicate(
+                    format: "category == %@",
                     freeCategory
                 )
 
-            } else {
+                let expenses =
+                    try context.fetch(expenseRequest)
 
-                // No matching Premium category.
-                // Promote the Free category.
-                freeCategory.userID =
-                    userID
+                for expense in expenses {
+                    expense.category = premiumCategory
+                    expense.userID = userID
+                }
+
+                context.delete(freeCategory)
+
+            } else {
+                freeCategory.userID = userID
             }
         }
 
         try context.save()
 
         AppLogger.shared.info(
-            "Free categories migrated to Premium user: \(userID)"
+            "Free default categories preserved; Premium copies prepared for user: \(userID)"
         )
     }
 
