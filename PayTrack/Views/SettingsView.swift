@@ -136,6 +136,11 @@ struct SettingsView: View {
                         Text("Français")
                             .tag("fr")
                     }
+                    .onChange(of: language) {
+                        Task {
+                            await SyncService.shared.syncProfileSettings()
+                        }
+                    }
                 }
 
 

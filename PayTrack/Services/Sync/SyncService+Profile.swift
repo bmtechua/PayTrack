@@ -15,6 +15,7 @@ extension SyncService {
     func syncProfileSettings() async {
 
         do {
+
             let user = try await client.auth.session.user
 
             let currency =
@@ -25,16 +26,21 @@ extension SyncService {
 
             let budget = monthlyBudget == 0 ? 5000 : monthlyBudget
 
+            let language =
+                UserDefaults.standard.string(forKey: "language") ?? "uk"
+
             struct ProfileSettings: Encodable {
                 let id: UUID
                 let currency: String
                 let monthly_budget: Double
+                let language: String
             }
 
             let profile = ProfileSettings(
                 id: user.id,
                 currency: currency,
-                monthly_budget: budget
+                monthly_budget: budget,
+                language: language
             )
 
             try await client
@@ -43,10 +49,11 @@ extension SyncService {
                 .execute()
 
             AppLogger.shared.info(
-                "Profile settings synced: currency=\(currency), budget=\(budget)"
+                "Profile settings synced: currency=\(currency), budget=\(budget), language=\(language)"
             )
 
         } catch {
+
             AppLogger.shared.error(
                 "Profile settings sync failed: \(error.localizedDescription)"
             )
@@ -58,16 +65,18 @@ extension SyncService {
     func loadProfileSettings() async {
 
         do {
+
             let user = try await client.auth.session.user
 
             struct ProfileSettings: Decodable {
                 let currency: String
                 let monthly_budget: Double
+                let language: String
             }
 
             let profile: ProfileSettings = try await client
                 .from("profiles")
-                .select("currency, monthly_budget")
+                .select("currency, monthly_budget, language")
                 .eq("id", value: user.id.uuidString)
                 .single()
                 .execute()
@@ -83,11 +92,17 @@ extension SyncService {
                 forKey: "monthlyBudget"
             )
 
+            UserDefaults.standard.set(
+                profile.language,
+                forKey: "language"
+            )
+
             AppLogger.shared.info(
-                "Profile settings loaded: currency=\(profile.currency), budget=\(profile.monthly_budget)"
+                "Profile settings loaded: currency=\(profile.currency), budget=\(profile.monthly_budget), language=\(profile.language)"
             )
 
         } catch {
+
             AppLogger.shared.error(
                 "Profile settings load failed: \(error.localizedDescription)"
             )
