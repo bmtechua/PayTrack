@@ -112,3 +112,6 @@
 
 "loading" = "Chargement...";
 "syncing" = "Synchronisation...";
+
+"report_sent" = "Rapport envoyé avec succès";
+"report_error" = "Échec de l’envoi du rapport";

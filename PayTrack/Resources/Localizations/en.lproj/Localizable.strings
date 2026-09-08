@@ -113,3 +113,6 @@
 
 "loading" = "Loading...";
 "syncing" = "Synchronizing...";
+
+"report_sent" = "Report sent successfully";
+"report_error" = "Failed to send report";
