@@ -15,23 +15,29 @@ final class SyncService {
     static let shared = SyncService()
 
     let client = SupabaseManager.shared.client
-    let context = PersistenceController.shared.container.viewContext
-    
+
+    let context =
+        PersistenceController.shared.container.viewContext
+
     var categoriesChannel: RealtimeChannelV2?
+
     var expensesChannel: RealtimeChannelV2?
+
     var profileChannel: RealtimeChannelV2?
-    
+
     var fullSyncTask: Task<Void, Never>?
-    
+
     // MARK: - Cancel full sync
 
     func cancelFullSync() {
 
         fullSyncTask?.cancel()
+
         fullSyncTask = nil
 
         AppLogger.shared.info(
-            "Full sync cancelled"
+            "Full sync cancelled",
+            category: .sync
         )
     }
 
@@ -63,22 +69,24 @@ final class SyncService {
                 try context.fetch(request)
 
             AppLogger.shared.info(
-                "Sync test: user \(user.id), local expenses: \(expenses.count)"
+                "Sync test: user \(user.id), local expenses: \(expenses.count)",
+                category: .sync
             )
 
             if let expense = expenses.first {
 
                 AppLogger.shared.info(
-                    "Sync test expense: \(expense.title ?? "No title"), amount: \(expense.amount)"
+                    "Sync test expense: \(expense.title ?? "No title"), amount: \(expense.amount)",
+                    category: .sync
                 )
             }
 
         } catch {
 
             AppLogger.shared.error(
-                "Sync test failed: \(error.localizedDescription)"
+                "Sync test failed: \(error.localizedDescription)",
+                category: .sync
             )
         }
     }
 }
-

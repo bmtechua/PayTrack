@@ -198,6 +198,7 @@ extension SyncService {
                     Double(value)
 
             default:
+
                 break
             }
         }
@@ -449,7 +450,8 @@ extension SyncService {
         try context.save()
 
         AppLogger.shared.info(
-            "Free default categories preserved; Premium copies prepared for user: \(userID)"
+            "Free default categories preserved; Premium copies prepared for user: \(userID)",
+            category: .sync
         )
     }
 
@@ -484,7 +486,8 @@ extension SyncService {
         try context.save()
 
         AppLogger.shared.info(
-            "Free expenses migrated to Premium user: \(userID)"
+            "Free expenses migrated to Premium user: \(userID)",
+            category: .sync
         )
     }
 
@@ -609,17 +612,20 @@ extension SyncService {
                 )
 
                 AppLogger.shared.info(
-                    "Local duplicate removed: \(duplicateName)"
+                    "Local duplicate removed: \(duplicateName)",
+                    category: .coreData
                 )
             }
         }
 
         if context.hasChanges {
+
             try context.save()
         }
 
         AppLogger.shared.info(
-            "Local duplicate category cleanup completed"
+            "Local duplicate category cleanup completed",
+            category: .coreData
         )
     }
 
@@ -745,7 +751,8 @@ extension SyncService {
                 try await currentUserID()
 
             AppLogger.shared.info(
-                "Full sync started for user: \(userID)"
+                "Full sync started for user: \(userID)",
+                category: .sync
             )
 
             // -------------------------------------------------
@@ -864,19 +871,22 @@ extension SyncService {
             try context.save()
 
             AppLogger.shared.info(
-                "Full sync completed: \(categoriesByID.count) categories, \(remoteExpenses.count) remote expenses"
+                "Full sync completed: \(categoriesByID.count) categories, \(remoteExpenses.count) remote expenses",
+                category: .sync
             )
 
         } catch is CancellationError {
 
             AppLogger.shared.info(
-                "Full sync cancelled"
+                "Full sync cancelled",
+                category: .sync
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Full sync failed: \(error.localizedDescription)"
+                "Full sync failed: \(error.localizedDescription)",
+                category: .sync
             )
         }
     }

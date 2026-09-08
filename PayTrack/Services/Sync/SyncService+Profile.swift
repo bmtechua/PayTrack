@@ -16,7 +16,8 @@ extension SyncService {
 
         do {
 
-            let user = try await client.auth.session.user
+            let user =
+                try await client.auth.session.user
 
             let currency =
                 UserDefaults.standard.string(forKey: "currency") ?? "UAH"
@@ -30,6 +31,7 @@ extension SyncService {
                 UserDefaults.standard.string(forKey: "language") ?? "uk"
 
             struct ProfileSettings: Encodable {
+
                 let id: UUID
                 let currency: String
                 let monthly_budget: Double
@@ -49,13 +51,15 @@ extension SyncService {
                 .execute()
 
             AppLogger.shared.info(
-                "Profile settings synced: currency=\(currency), budget=\(budget), language=\(language)"
+                "Profile settings synced: currency=\(currency), budget=\(budget), language=\(language)",
+                category: .profile
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Profile settings sync failed: \(error.localizedDescription)"
+                "Profile settings sync failed: \(error.localizedDescription)",
+                category: .profile
             )
         }
     }
@@ -66,21 +70,27 @@ extension SyncService {
 
         do {
 
-            let user = try await client.auth.session.user
+            let user =
+                try await client.auth.session.user
 
             struct ProfileSettings: Decodable {
+
                 let currency: String
                 let monthly_budget: Double
                 let language: String
             }
 
-            let profile: ProfileSettings = try await client
-                .from("profiles")
-                .select("currency, monthly_budget, language")
-                .eq("id", value: user.id.uuidString)
-                .single()
-                .execute()
-                .value
+            let profile: ProfileSettings =
+                try await client
+                    .from("profiles")
+                    .select("currency, monthly_budget, language")
+                    .eq(
+                        "id",
+                        value: user.id.uuidString
+                    )
+                    .single()
+                    .execute()
+                    .value
 
             UserDefaults.standard.set(
                 profile.currency,
@@ -98,13 +108,20 @@ extension SyncService {
             )
 
             AppLogger.shared.info(
-                "Profile settings loaded: currency=\(profile.currency), budget=\(profile.monthly_budget), language=\(profile.language)"
+                "Profile settings loaded: currency=\(profile.currency), budget=\(profile.monthly_budget), language=\(profile.language)",
+                category: .profile
             )
 
         } catch {
 
-            AppLogger.shared.error(
-                "Profile settings load failed: \(error.localizedDescription)"
+            // Profile does not exist yet.
+            // Create it from the current local settings.
+
+            await syncProfileSettings()
+
+            AppLogger.shared.info(
+                "Profile did not exist. Created from local settings.",
+                category: .profile
             )
         }
     }

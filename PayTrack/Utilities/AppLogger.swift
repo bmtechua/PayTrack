@@ -28,7 +28,19 @@ final class AppLogger {
     var fileURL: URL {
         currentLogURL
     }
-    
+
+    // MARK: - Log Category
+
+    enum LogCategory: String {
+        case app = "APP"
+        case auth = "AUTH"
+        case profile = "PROFILE"
+        case sync = "SYNC"
+        case realtime = "REALTIME"
+        case coreData = "CORE DATA"
+    }
+
+    // MARK: - Init
 
     private init() {
 
@@ -67,7 +79,8 @@ final class AppLogger {
                 )
 
             info(
-                "Logger switched to user: \(userID)"
+                "Logger switched to user: \(userID)",
+                category: .auth
             )
 
         } else {
@@ -78,7 +91,8 @@ final class AppLogger {
                 )
 
             info(
-                "Logger switched to anonymous session"
+                "Logger switched to anonymous session",
+                category: .auth
             )
         }
     }
@@ -87,53 +101,103 @@ final class AppLogger {
 
     func info(_ message: String) {
 
-        logger.info(
-            "\(message, privacy: .public)"
-        )
-
-        writeToFile(
-            "INFO",
-            message
+        info(
+            message,
+            category: .app
         )
     }
 
     func debug(_ message: String) {
 
-        logger.debug(
-            "\(message, privacy: .public)"
-        )
-
-        writeToFile(
-            "DEBUG",
-            message
+        debug(
+            message,
+            category: .app
         )
     }
 
     func warning(_ message: String) {
 
-        logger.warning(
-            "\(message, privacy: .public)"
-        )
-
-        writeToFile(
-            "WARNING",
-            message
+        warning(
+            message,
+            category: .app
         )
     }
 
     func error(_ message: String) {
 
-        logger.error(
-            "\(message, privacy: .public)"
+        error(
+            message,
+            category: .app
+        )
+    }
+
+    // MARK: - Categorized Logging
+
+    func info(
+        _ message: String,
+        category: LogCategory
+    ) {
+
+        logger.info(
+            "[\(category.rawValue)] \(message, privacy: .public)"
         )
 
         writeToFile(
-            "ERROR",
+            "INFO",
+            category,
             message
         )
     }
 
-    // MARK: - Read log
+    func debug(
+        _ message: String,
+        category: LogCategory
+    ) {
+
+        logger.debug(
+            "[\(category.rawValue)] \(message, privacy: .public)"
+        )
+
+        writeToFile(
+            "DEBUG",
+            category,
+            message
+        )
+    }
+
+    func warning(
+        _ message: String,
+        category: LogCategory
+    ) {
+
+        logger.warning(
+            "[\(category.rawValue)] \(message, privacy: .public)"
+        )
+
+        writeToFile(
+            "WARNING",
+            category,
+            message
+        )
+    }
+
+    func error(
+        _ message: String,
+        category: LogCategory
+    ) {
+
+        logger.error(
+            "[\(category.rawValue)] \(message, privacy: .public)"
+        )
+
+        writeToFile(
+            "ERROR",
+            category,
+            message
+        )
+    }
+
+    // MARK: - Read Log
 
     func readLog() -> String {
 
@@ -150,7 +214,7 @@ final class AppLogger {
         }
     }
 
-    // MARK: - Clear log
+    // MARK: - Clear Log
 
     func clearLog() {
 
@@ -177,10 +241,12 @@ final class AppLogger {
 
     private func writeToFile(
         _ level: String,
+        _ category: LogCategory,
         _ message: String
     ) {
 
         let formatter = DateFormatter()
+
         formatter.dateFormat =
             "yyyy-MM-dd HH:mm:ss"
 
@@ -190,7 +256,7 @@ final class AppLogger {
             )
 
         let line =
-            "[\(date)] \(level): \(message)\n"
+            "[\(date)] \(level) [\(category.rawValue)]: \(message)\n"
 
         guard let data =
                 line.data(using: .utf8)

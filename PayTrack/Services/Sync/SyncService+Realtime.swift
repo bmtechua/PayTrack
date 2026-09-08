@@ -10,6 +10,7 @@ import CoreData
 import Supabase
 
 extension SyncService {
+
     // MARK: - Realtime categories
 
     func startCategoriesRealtime() async {
@@ -20,10 +21,12 @@ extension SyncService {
 
         do {
 
-            let user = try await client.auth.session.user
+            let user =
+                try await client.auth.session.user
 
             AppLogger.shared.info(
-                "Realtime user ID: \(user.id.uuidString)"
+                "Realtime user ID: \(user.id.uuidString)",
+                category: .realtime
             )
 
             let channel = client.channel(
@@ -51,7 +54,8 @@ extension SyncService {
                         )
 
                         AppLogger.shared.info(
-                            "Realtime category INSERT received"
+                            "Realtime category INSERT received",
+                            category: .realtime
                         )
 
                     case .update(let action):
@@ -61,7 +65,8 @@ extension SyncService {
                         )
 
                         AppLogger.shared.info(
-                            "Realtime category UPDATE received"
+                            "Realtime category UPDATE received",
+                            category: .realtime
                         )
 
                     case .delete(let action):
@@ -71,7 +76,8 @@ extension SyncService {
                         )
 
                         AppLogger.shared.info(
-                            "Realtime category DELETE received"
+                            "Realtime category DELETE received",
+                            category: .realtime
                         )
                     }
                 }
@@ -80,17 +86,19 @@ extension SyncService {
             try await channel.subscribeWithError()
 
             AppLogger.shared.info(
-                "Categories Realtime subscribed"
+                "Categories Realtime subscribed",
+                category: .realtime
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Categories Realtime failed: \(error.localizedDescription)"
+                "Categories Realtime failed: \(error.localizedDescription)",
+                category: .realtime
             )
         }
     }
-    
+
     // MARK: - Stop Realtime categories
 
     func stopCategoriesRealtime() async {
@@ -104,10 +112,11 @@ extension SyncService {
         categoriesChannel = nil
 
         AppLogger.shared.info(
-            "Categories Realtime unsubscribed"
+            "Categories Realtime unsubscribed",
+            category: .realtime
         )
     }
-    
+
     // MARK: - Realtime expenses
 
     func startExpensesRealtime() async {
@@ -118,7 +127,8 @@ extension SyncService {
 
         do {
 
-            let user = try await client.auth.session.user
+            let user =
+                try await client.auth.session.user
 
             let channel = client.channel(
                 "expenses-realtime-\(user.id.uuidString)"
@@ -145,7 +155,8 @@ extension SyncService {
                         )
 
                         AppLogger.shared.info(
-                            "Realtime expense INSERT received"
+                            "Realtime expense INSERT received",
+                            category: .realtime
                         )
 
                     case .update(let action):
@@ -155,7 +166,8 @@ extension SyncService {
                         )
 
                         AppLogger.shared.info(
-                            "Realtime expense UPDATE received"
+                            "Realtime expense UPDATE received",
+                            category: .realtime
                         )
 
                     case .delete(let action):
@@ -165,7 +177,8 @@ extension SyncService {
                         )
 
                         AppLogger.shared.info(
-                            "Realtime expense DELETE received"
+                            "Realtime expense DELETE received",
+                            category: .realtime
                         )
                     }
                 }
@@ -174,20 +187,23 @@ extension SyncService {
             try await channel.subscribeWithError()
 
             AppLogger.shared.info(
-                "Expenses Realtime subscribed"
+                "Expenses Realtime subscribed",
+                category: .realtime
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Expenses Realtime failed: \(error.localizedDescription)"
+                "Expenses Realtime failed: \(error.localizedDescription)",
+                category: .realtime
             )
         }
     }
-    
+
     // MARK: - Stop Realtime expenses
 
     func stopExpensesRealtime() async {
+
         guard let channel = expensesChannel else {
             return
         }
@@ -197,10 +213,11 @@ extension SyncService {
         expensesChannel = nil
 
         AppLogger.shared.info(
-            "Expenses Realtime unsubscribed"
+            "Expenses Realtime unsubscribed",
+            category: .realtime
         )
     }
-    
+
     // MARK: - Realtime profile
 
     func startProfileRealtime() async {
@@ -211,7 +228,8 @@ extension SyncService {
 
         do {
 
-            let user = try await client.auth.session.user
+            let user =
+                try await client.auth.session.user
 
             let channel = client.channel(
                 "profile-realtime-\(user.id.uuidString)"
@@ -238,7 +256,8 @@ extension SyncService {
                         )
 
                         AppLogger.shared.info(
-                            "Realtime profile INSERT received"
+                            "Realtime profile INSERT received",
+                            category: .realtime
                         )
 
                     case .update(let action):
@@ -248,15 +267,16 @@ extension SyncService {
                         )
 
                         AppLogger.shared.info(
-                            "Realtime profile UPDATE received"
+                            "Realtime profile UPDATE received",
+                            category: .realtime
                         )
 
                     case .delete:
 
                         AppLogger.shared.warning(
-                            "Realtime profile DELETE received"
+                            "Realtime profile DELETE received",
+                            category: .realtime
                         )
-
                     }
                 }
             }
@@ -264,13 +284,15 @@ extension SyncService {
             try await channel.subscribeWithError()
 
             AppLogger.shared.info(
-                "Profile Realtime subscribed"
+                "Profile Realtime subscribed",
+                category: .realtime
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Profile Realtime failed: \(error.localizedDescription)"
+                "Profile Realtime failed: \(error.localizedDescription)",
+                category: .realtime
             )
         }
     }
@@ -288,10 +310,11 @@ extension SyncService {
         profileChannel = nil
 
         AppLogger.shared.info(
-            "Profile Realtime unsubscribed"
+            "Profile Realtime unsubscribed",
+            category: .realtime
         )
     }
-    
+
     // MARK: - Apply realtime profile
 
     func applyRealtimeProfileUpdate(
@@ -338,16 +361,16 @@ extension SyncService {
             )
 
             AppLogger.shared.info(
-                "Realtime profile applied: currency=\(profile.currency), budget=\(profile.monthly_budget), language=\(profile.language)"
+                "Realtime profile applied: currency=\(profile.currency), budget=\(profile.monthly_budget), language=\(profile.language)",
+                category: .realtime
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Realtime profile update failed: \(error.localizedDescription)"
+                "Realtime profile update failed: \(error.localizedDescription)",
+                category: .realtime
             )
         }
     }
-
-
 }

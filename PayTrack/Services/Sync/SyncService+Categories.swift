@@ -21,13 +21,15 @@ extension SyncService {
             guard let categoryID = category.id else {
 
                 AppLogger.shared.error(
-                    "Category has no ID"
+                    "Category has no ID",
+                    category: .sync
                 )
 
                 return
             }
 
             // This category belongs to the Premium user.
+
             category.userID = user.id
 
             let data: [String: AnyJSON] = [
@@ -61,17 +63,18 @@ extension SyncService {
             try context.save()
 
             AppLogger.shared.info(
-                "Category synced successfully: \(category.name ?? "No name")"
+                "Category synced successfully: \(category.name ?? "No name")",
+                category: .sync
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Category sync failed: \(error.localizedDescription)"
+                "Category sync failed: \(error.localizedDescription)",
+                category: .sync
             )
         }
     }
-
 
     // MARK: - Delete category
 
@@ -99,13 +102,15 @@ extension SyncService {
                 .execute()
 
             AppLogger.shared.info(
-                "Category deleted from Supabase: \(name)"
+                "Category deleted from Supabase: \(name)",
+                category: .sync
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Category delete sync failed: \(error.localizedDescription)"
+                "Category delete sync failed: \(error.localizedDescription)",
+                category: .sync
             )
         }
     }
@@ -119,20 +124,17 @@ extension SyncService {
         guard
             case let .string(idString) =
                 record["id"],
-
             let categoryID =
                 UUID(uuidString: idString),
-
             case let .string(userIDString) =
                 record["user_id"],
-
             let userID =
                 UUID(uuidString: userIDString)
-
         else {
 
             AppLogger.shared.error(
-                "Realtime category INSERT: invalid ID or user_id"
+                "Realtime category INSERT: invalid ID or user_id",
+                category: .realtime
             )
 
             return
@@ -164,7 +166,8 @@ extension SyncService {
             if try context.fetch(request).first != nil {
 
                 AppLogger.shared.info(
-                    "Realtime category INSERT skipped: already exists"
+                    "Realtime category INSERT skipped: already exists",
+                    category: .realtime
                 )
 
                 return
@@ -203,13 +206,15 @@ extension SyncService {
             try context.save()
 
             AppLogger.shared.info(
-                "Realtime category INSERT applied: \(category.name ?? "No name")"
+                "Realtime category INSERT applied: \(category.name ?? "No name")",
+                category: .realtime
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Realtime category INSERT failed: \(error.localizedDescription)"
+                "Realtime category INSERT failed: \(error.localizedDescription)",
+                category: .realtime
             )
         }
     }
@@ -223,20 +228,17 @@ extension SyncService {
         guard
             case let .string(idString) =
                 record["id"],
-
             let categoryID =
                 UUID(uuidString: idString),
-
             case let .string(userIDString) =
                 record["user_id"],
-
             let userID =
                 UUID(uuidString: userIDString)
-
         else {
 
             AppLogger.shared.error(
-                "Realtime category UPDATE: invalid ID or user_id"
+                "Realtime category UPDATE: invalid ID or user_id",
+                category: .realtime
             )
 
             return
@@ -270,7 +272,8 @@ extension SyncService {
             else {
 
                 AppLogger.shared.info(
-                    "Realtime category UPDATE: local category not found"
+                    "Realtime category UPDATE: local category not found",
+                    category: .realtime
                 )
 
                 return
@@ -303,13 +306,15 @@ extension SyncService {
             try context.save()
 
             AppLogger.shared.info(
-                "Realtime category UPDATE applied: \(category.name ?? "No name")"
+                "Realtime category UPDATE applied: \(category.name ?? "No name")",
+                category: .realtime
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Realtime category UPDATE failed: \(error.localizedDescription)"
+                "Realtime category UPDATE failed: \(error.localizedDescription)",
+                category: .realtime
             )
         }
     }
@@ -321,14 +326,21 @@ extension SyncService {
     ) {
 
         guard
-            case let .string(idString) = record["id"],
-            let categoryID = UUID(uuidString: idString),
-            case let .string(userIDString) = record["user_id"],
-            let userID = UUID(uuidString: userIDString)
+            case let .string(idString) =
+                record["id"],
+            let categoryID =
+                UUID(uuidString: idString),
+            case let .string(userIDString) =
+                record["user_id"],
+            let userID =
+                UUID(uuidString: userIDString)
         else {
+
             AppLogger.shared.error(
-                "Realtime category DELETE: invalid ID or user_id"
+                "Realtime category DELETE: invalid ID or user_id",
+                category: .realtime
             )
+
             return
         }
 
@@ -340,25 +352,30 @@ extension SyncService {
             return
         }
 
-        let request: NSFetchRequest<Category> =
+        let request:
+            NSFetchRequest<Category> =
             Category.fetchRequest()
 
         request.fetchLimit = 1
 
-        request.predicate = NSPredicate(
-            format: "id == %@ AND userID == %@",
-            categoryID as CVarArg,
-            userID as CVarArg
-        )
+        request.predicate =
+            NSPredicate(
+                format: "id == %@ AND userID == %@",
+                categoryID as CVarArg,
+                userID as CVarArg
+            )
 
         do {
 
             guard let category =
                 try context.fetch(request).first
             else {
+
                 AppLogger.shared.info(
-                    "Realtime category DELETE: local category not found"
+                    "Realtime category DELETE: local category not found",
+                    category: .realtime
                 )
+
                 return
             }
 
@@ -370,15 +387,16 @@ extension SyncService {
             try context.save()
 
             AppLogger.shared.info(
-                "Realtime category DELETE applied: \(categoryName)"
+                "Realtime category DELETE applied: \(categoryName)",
+                category: .realtime
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Realtime category DELETE failed: \(error.localizedDescription)"
+                "Realtime category DELETE failed: \(error.localizedDescription)",
+                category: .realtime
             )
         }
     }
-
 }

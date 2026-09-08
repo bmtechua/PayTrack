@@ -1,3 +1,8 @@
+//
+//  SyncService+Expenses.swift
+//  PayTrack
+//
+
 import Foundation
 import CoreData
 import Supabase
@@ -9,20 +14,31 @@ extension SyncService {
     func syncOneExpense(_ expense: Expense) async {
 
         do {
-            let user = try await client.auth.session.user
+
+            let user =
+                try await client.auth.session.user
 
             guard let expenseID = expense.id else {
-                AppLogger.shared.error("Expense has no ID")
+
+                AppLogger.shared.error(
+                    "Expense has no ID",
+                    category: .sync
+                )
+
                 return
             }
 
             // This expense now belongs to the Premium user.
+
             expense.userID = user.id
 
             let categoryID = expense.category?.id?.uuidString
 
             let data: [String: AnyJSON] = [
-                "id": .string(expenseID.uuidString),
+
+                "id": .string(
+                    expenseID.uuidString
+                ),
 
                 "user_id": .string(
                     user.id.uuidString
@@ -65,15 +81,19 @@ extension SyncService {
                 .execute()
 
             // Save the owner locally.
+
             try context.save()
 
             AppLogger.shared.info(
-                "Expense synced successfully: \(expense.title ?? "No title")"
+                "Expense synced successfully: \(expense.title ?? "No title")",
+                category: .sync
             )
 
         } catch {
+
             AppLogger.shared.error(
-                "Expense sync failed: \(error.localizedDescription)"
+                "Expense sync failed: \(error.localizedDescription)",
+                category: .sync
             )
         }
     }
@@ -86,7 +106,9 @@ extension SyncService {
     ) async {
 
         do {
-            let user = try await client.auth.session.user
+
+            let user =
+                try await client.auth.session.user
 
             try await client
                 .from("expenses")
@@ -102,12 +124,15 @@ extension SyncService {
                 .execute()
 
             AppLogger.shared.info(
-                "Expense deleted from Supabase: \(title)"
+                "Expense deleted from Supabase: \(title)",
+                category: .sync
             )
 
         } catch {
+
             AppLogger.shared.error(
-                "Expense delete sync failed: \(error.localizedDescription)"
+                "Expense delete sync failed: \(error.localizedDescription)",
+                category: .sync
             )
         }
     }
@@ -121,17 +146,20 @@ extension SyncService {
         guard
             case let .string(idString) = record["id"],
             let expenseID = UUID(uuidString: idString),
-
             case let .string(userIDString) = record["user_id"],
             let userID = UUID(uuidString: userIDString)
         else {
+
             AppLogger.shared.error(
-                "Realtime expense INSERT: invalid ID or user_id"
+                "Realtime expense INSERT: invalid ID or user_id",
+                category: .realtime
             )
+
             return
         }
 
         // Ignore records belonging to another user.
+
         guard
             UserDefaults.standard.string(
                 forKey: "activeUserID"
@@ -144,6 +172,7 @@ extension SyncService {
             Expense.fetchRequest()
 
         idRequest.fetchLimit = 1
+
         idRequest.predicate = NSPredicate(
             format: "id == %@ AND userID == %@",
             expenseID as CVarArg,
@@ -153,13 +182,17 @@ extension SyncService {
         do {
 
             if try context.fetch(idRequest).first != nil {
+
                 AppLogger.shared.info(
-                    "Realtime expense INSERT skipped: ID already exists"
+                    "Realtime expense INSERT skipped: ID already exists",
+                    category: .realtime
                 )
+
                 return
             }
 
             // Check by bank transaction ID.
+
             if case let .string(transactionID) =
                 record["transaction_id"],
                !transactionID.isEmpty {
@@ -181,8 +214,10 @@ extension SyncService {
                 ).first != nil {
 
                     AppLogger.shared.info(
-                        "Realtime expense INSERT skipped: transaction already exists"
+                        "Realtime expense INSERT skipped: transaction already exists",
+                        category: .realtime
                     )
+
                     return
                 }
             }
@@ -270,13 +305,15 @@ extension SyncService {
             try context.save()
 
             AppLogger.shared.info(
-                "Realtime expense INSERT applied: \(expense.title ?? "No title")"
+                "Realtime expense INSERT applied: \(expense.title ?? "No title")",
+                category: .realtime
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Realtime expense INSERT failed: \(error.localizedDescription)"
+                "Realtime expense INSERT failed: \(error.localizedDescription)",
+                category: .realtime
             )
         }
     }
@@ -291,19 +328,22 @@ extension SyncService {
             case let .string(idString) = record["id"],
             let expenseID =
                 UUID(uuidString: idString),
-
             case let .string(userIDString) =
                 record["user_id"],
             let userID =
                 UUID(uuidString: userIDString)
         else {
+
             AppLogger.shared.error(
-                "Realtime expense UPDATE: invalid ID or user_id"
+                "Realtime expense UPDATE: invalid ID or user_id",
+                category: .realtime
             )
+
             return
         }
 
         // Ignore records belonging to another user.
+
         guard
             UserDefaults.standard.string(
                 forKey: "activeUserID"
@@ -329,9 +369,12 @@ extension SyncService {
             guard let expense =
                 try context.fetch(request).first
             else {
+
                 AppLogger.shared.info(
-                    "Realtime expense UPDATE: local expense not found"
+                    "Realtime expense UPDATE: local expense not found",
+                    category: .realtime
                 )
+
                 return
             }
 
@@ -418,13 +461,15 @@ extension SyncService {
             try context.save()
 
             AppLogger.shared.info(
-                "Realtime expense UPDATE applied: \(expense.title ?? "No title")"
+                "Realtime expense UPDATE applied: \(expense.title ?? "No title")",
+                category: .realtime
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Realtime expense UPDATE failed: \(error.localizedDescription)"
+                "Realtime expense UPDATE failed: \(error.localizedDescription)",
+                category: .realtime
             )
         }
     }
@@ -439,19 +484,22 @@ extension SyncService {
             case let .string(idString) = record["id"],
             let expenseID =
                 UUID(uuidString: idString),
-
             case let .string(userIDString) =
                 record["user_id"],
             let userID =
                 UUID(uuidString: userIDString)
         else {
+
             AppLogger.shared.error(
-                "Realtime expense DELETE: invalid ID or user_id"
+                "Realtime expense DELETE: invalid ID or user_id",
+                category: .realtime
             )
+
             return
         }
 
         // Ignore records belonging to another user.
+
         guard
             UserDefaults.standard.string(
                 forKey: "activeUserID"
@@ -477,9 +525,12 @@ extension SyncService {
             guard let expense =
                 try context.fetch(request).first
             else {
+
                 AppLogger.shared.info(
-                    "Realtime expense DELETE: local expense not found"
+                    "Realtime expense DELETE: local expense not found",
+                    category: .realtime
                 )
+
                 return
             }
 
@@ -491,13 +542,15 @@ extension SyncService {
             try context.save()
 
             AppLogger.shared.info(
-                "Realtime expense DELETE applied: \(title)"
+                "Realtime expense DELETE applied: \(title)",
+                category: .realtime
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Realtime expense DELETE failed: \(error.localizedDescription)"
+                "Realtime expense DELETE failed: \(error.localizedDescription)",
+                category: .realtime
             )
         }
     }
