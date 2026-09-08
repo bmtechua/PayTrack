@@ -98,9 +98,9 @@ final class AuthService: ObservableObject {
                 )
 
                 await SyncService.shared.startCategoriesRealtime()
-
                 await SyncService.shared.startExpensesRealtime()
-
+                await SyncService.shared.startProfileRealtime()
+                
                 if !hasCompletedAuthSync {
 
                     // Load settings from Supabase first.
@@ -154,8 +154,8 @@ final class AuthService: ObservableObject {
         )
 
         await SyncService.shared.startCategoriesRealtime()
-
         await SyncService.shared.startExpensesRealtime()
+        await SyncService.shared.startProfileRealtime()
 
         AppLogger.shared.info(
             "Registration sync started"
@@ -206,8 +206,8 @@ final class AuthService: ObservableObject {
         )
 
         await SyncService.shared.startCategoriesRealtime()
-
         await SyncService.shared.startExpensesRealtime()
+        await SyncService.shared.startProfileRealtime()
 
         AppLogger.shared.info(
             "Login sync started"
@@ -254,6 +254,7 @@ final class AuthService: ObservableObject {
         // Stop Premium realtime.
         await SyncService.shared.stopCategoriesRealtime()
         await SyncService.shared.stopExpensesRealtime()
+        await SyncService.shared.stopProfileRealtime()
 
         // Remove only active Premium session state.
         // Premium local data remains on device.

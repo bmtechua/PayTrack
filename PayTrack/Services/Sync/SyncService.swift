@@ -19,6 +19,7 @@ final class SyncService {
     
     var categoriesChannel: RealtimeChannelV2?
     var expensesChannel: RealtimeChannelV2?
+    var profileChannel: RealtimeChannelV2?
     
     var fullSyncTask: Task<Void, Never>?
     

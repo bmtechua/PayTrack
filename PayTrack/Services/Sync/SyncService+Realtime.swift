@@ -200,4 +200,154 @@ extension SyncService {
             "Expenses Realtime unsubscribed"
         )
     }
+    
+    // MARK: - Realtime profile
+
+    func startProfileRealtime() async {
+
+        guard profileChannel == nil else {
+            return
+        }
+
+        do {
+
+            let user = try await client.auth.session.user
+
+            let channel = client.channel(
+                "profile-realtime-\(user.id.uuidString)"
+            )
+
+            let changes = channel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "profiles"
+            )
+
+            profileChannel = channel
+
+            Task { @MainActor in
+
+                for await change in changes {
+
+                    switch change {
+
+                    case .insert(let action):
+
+                        await self.applyRealtimeProfileUpdate(
+                            action.record
+                        )
+
+                        AppLogger.shared.info(
+                            "Realtime profile INSERT received"
+                        )
+
+                    case .update(let action):
+
+                        await self.applyRealtimeProfileUpdate(
+                            action.record
+                        )
+
+                        AppLogger.shared.info(
+                            "Realtime profile UPDATE received"
+                        )
+
+                    case .delete:
+
+                        AppLogger.shared.warning(
+                            "Realtime profile DELETE received"
+                        )
+
+                    }
+                }
+            }
+
+            try await channel.subscribeWithError()
+
+            AppLogger.shared.info(
+                "Profile Realtime subscribed"
+            )
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Profile Realtime failed: \(error.localizedDescription)"
+            )
+        }
+    }
+
+    // MARK: - Stop Realtime profile
+
+    func stopProfileRealtime() async {
+
+        guard let channel = profileChannel else {
+            return
+        }
+
+        await client.removeChannel(channel)
+
+        profileChannel = nil
+
+        AppLogger.shared.info(
+            "Profile Realtime unsubscribed"
+        )
+    }
+    
+    // MARK: - Apply realtime profile
+
+    func applyRealtimeProfileUpdate(
+        _ record: [String: AnyJSON]
+    ) async {
+
+        do {
+
+            let data = try JSONEncoder().encode(record)
+
+            struct ProfileSettings: Decodable {
+                let id: UUID
+                let currency: String
+                let monthly_budget: Double
+                let language: String
+            }
+
+            let profile =
+                try JSONDecoder().decode(
+                    ProfileSettings.self,
+                    from: data
+                )
+
+            let currentUser =
+                try await client.auth.session.user
+
+            guard profile.id == currentUser.id else {
+                return
+            }
+
+            UserDefaults.standard.set(
+                profile.currency,
+                forKey: "currency"
+            )
+
+            UserDefaults.standard.set(
+                profile.monthly_budget,
+                forKey: "monthlyBudget"
+            )
+
+            UserDefaults.standard.set(
+                profile.language,
+                forKey: "language"
+            )
+
+            AppLogger.shared.info(
+                "Realtime profile applied: currency=\(profile.currency), budget=\(profile.monthly_budget), language=\(profile.language)"
+            )
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Realtime profile update failed: \(error.localizedDescription)"
+            )
+        }
+    }
+
+
 }
