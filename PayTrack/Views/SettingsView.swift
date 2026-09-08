@@ -197,6 +197,20 @@ struct SettingsView: View {
                         Text("app_log")
                     }
                 }
+                
+                // MARK: - Report Problem
+                
+                Section {
+
+                    NavigationLink {
+
+                        ReportProblemView()
+
+                    } label: {
+
+                        Text("report_problem")
+                    }
+                }
             }
 
             .navigationTitle("settings_title")
