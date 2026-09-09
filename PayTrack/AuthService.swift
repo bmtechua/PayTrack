@@ -244,9 +244,9 @@ final class AuthService: ObservableObject {
 
     func signOut() async throws {
 
-        AppLogger.shared.info(
-            "Logout attempt"
-        )
+        //AppLogger.shared.info(
+          //  "Logout attempt"
+        //)
 
         // Cancel any running full sync.
         SyncService.shared.cancelFullSync()

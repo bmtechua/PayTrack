@@ -30,9 +30,9 @@ struct AccountView: View {
         }
         .navigationTitle("account")
 
-        .task {
-            await authService.loadCurrentUser()
-        }
+        //.task {
+            //await authService.loadCurrentUser()
+        //}
 
         // MARK: - Forgot password
 
@@ -120,6 +120,12 @@ struct AccountView: View {
                 }
 
                 Button("sign_out", role: .destructive) {
+
+                    guard !isLoading else {
+                        return
+                    }
+
+                    isLoading = true
 
                     AppLogger.shared.info(
                         "Logout attempt"
@@ -318,7 +324,6 @@ struct AccountView: View {
 
     private func signOut() async {
 
-        isLoading = true
         errorMessage = nil
 
         do {
