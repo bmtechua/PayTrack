@@ -39,32 +39,32 @@ struct ReportProblemView: View {
     private var reportText: String {
 
         let email =
-            AuthService.shared.user?.email ?? "Not authenticated"
+            AuthService.shared.user?.email ?? String(localized: "not_authenticated")
 
         let userID =
-            AuthService.shared.user?.id.uuidString ?? "Not authenticated"
+            AuthService.shared.user?.id.uuidString ?? String(localized: "not_authenticated")
 
         return """
-        PayTrack — Diagnostic Report
+        \(String(localized: "diagnostic_report_title"))
 
-        Problem:
+        \(String(localized: "problem")):
 
         \(problemDescription)
 
-        --- Technical Information ---
+        --- \(String(localized: "technical_information")) ---
 
-        App: PayTrack
-        Version: \(appVersion)
-        Build: \(appBuild)
-        Device: \(deviceModel)
-        System: \(systemVersion)
-        Date: \(Date())
+        \(String(localized: "app")): PayTrack
+        \(String(localized: "version")): \(appVersion)
+        \(String(localized: "build")): \(appBuild)
+        \(String(localized: "device")): \(deviceModel)
+        \(String(localized: "system")): \(systemVersion)
+        \(String(localized: "date")): \(Date())
 
-        User:
-        Email: \(email)
-        ID: \(userID)
+        \(String(localized: "user")):
+        \(String(localized: "email")): \(email)
+        \(String(localized: "id")): \(userID)
 
-        --- Log ---
+        --- \(String(localized: "log")) ---
 
         \(log)
         """

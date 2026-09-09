@@ -116,3 +116,24 @@
 
 "report_sent" = "Report sent successfully";
 "report_error" = "Failed to send report";
+"diagnostic_report_title" = "PayTrack — Diagnostic Report";
+"problem" = "Problem";
+"technical_information" = "Technical Information";
+"app" = "App";
+"version" = "Version";
+"build" = "Build";
+"device" = "Device";
+"system" = "System";
+"date" = "Date";
+"user" = "User";
+"email" = "Email";
+"id" = "ID";
+"log" = "Log";
+"not_authenticated" = "Not authenticated";
+
+"report_problem" = "Report a Problem";
+"problem_description" = "Problem Description";
+"problem_description_hint" = "Describe the problem in as much detail as possible.";
+"send_report" = "Send Report";
+"report_sent" = "Report sent successfully";
+"report_error" = "Failed to send report";

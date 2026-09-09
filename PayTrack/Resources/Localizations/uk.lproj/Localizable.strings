@@ -116,3 +116,24 @@
 
 "report_sent" = "Звіт успішно надіслано";
 "report_error" = "Не вдалося надіслати звіт";
+"diagnostic_report_title" = "PayTrack — Діагностичний звіт";
+"problem" = "Проблема";
+"technical_information" = "Технічна інформація";
+"app" = "Застосунок";
+"version" = "Версія";
+"build" = "Збірка";
+"device" = "Пристрій";
+"system" = "Система";
+"date" = "Дата";
+"user" = "Користувач";
+"email" = "Email";
+"id" = "ID";
+"log" = "Журнал";
+"not_authenticated" = "Не автентифіковано";
+
+"report_problem" = "Повідомити про проблему";
+"problem_description" = "Опис проблеми";
+"problem_description_hint" = "Опишіть проблему якомога детальніше.";
+"send_report" = "Надіслати звіт";
+"report_sent" = "Звіт успішно надіслано";
+"report_error" = "Не вдалося надіслати звіт";

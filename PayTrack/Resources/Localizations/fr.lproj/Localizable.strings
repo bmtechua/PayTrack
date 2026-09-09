@@ -115,3 +115,24 @@
 
 "report_sent" = "Rapport envoyé avec succès";
 "report_error" = "Échec de l’envoi du rapport";
+"diagnostic_report_title" = "PayTrack — Rapport de diagnostic";
+"problem" = "Problème";
+"technical_information" = "Informations techniques";
+"app" = "Application";
+"version" = "Version";
+"build" = "Build";
+"device" = "Appareil";
+"system" = "Système";
+"date" = "Date";
+"user" = "Utilisateur";
+"email" = "E-mail";
+"id" = "ID";
+"log" = "Journal";
+"not_authenticated" = "Non authentifié";
+
+"report_problem" = "Signaler un problème";
+"problem_description" = "Description du problème";
+"problem_description_hint" = "Décrivez le problème avec autant de détails que possible.";
+"send_report" = "Envoyer le rapport";
+"report_sent" = "Rapport envoyé avec succès";
+"report_error" = "Échec de l’envoi du rapport";
