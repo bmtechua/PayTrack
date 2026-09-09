@@ -156,6 +156,7 @@ final class AuthService: ObservableObject {
         await SyncService.shared.startCategoriesRealtime()
         await SyncService.shared.startExpensesRealtime()
         await SyncService.shared.startProfileRealtime()
+        await PushDeviceService.shared.registerDevice()
 
         AppLogger.shared.info(
             "Registration sync started"
@@ -208,6 +209,7 @@ final class AuthService: ObservableObject {
         await SyncService.shared.startCategoriesRealtime()
         await SyncService.shared.startExpensesRealtime()
         await SyncService.shared.startProfileRealtime()
+        await PushDeviceService.shared.registerDevice()
 
         AppLogger.shared.info(
             "Login sync started"

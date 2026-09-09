@@ -19,7 +19,7 @@ final class AppLogger {
 
     private let fileManager = FileManager.default
 
-    private let maxLogSize: UInt64 = 3 * 1024 * 1024
+    private let maxLogSize: UInt64 = 1 * 1024 * 1024
 
     private let logsFolderURL: URL
 
@@ -84,11 +84,12 @@ final class AppLogger {
             )
 
         } else {
-
             currentLogURL =
                 logsFolderURL.appendingPathComponent(
                     "anonymous.log"
                 )
+
+            clearLog()
 
             info(
                 "Logger switched to anonymous session",

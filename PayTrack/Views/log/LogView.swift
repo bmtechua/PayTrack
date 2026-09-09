@@ -70,7 +70,18 @@ struct LogView: View {
                 }
             }
             .onAppear {
-                loadLog()
+                Task {
+                    let text = AppLogger.shared.readLog()
+
+                    guard !text.isEmpty else {
+                        return
+                    }
+
+                    let lines = text.components(separatedBy: "\n")
+                    let recentLines = lines.suffix(1000)
+
+                    logText = recentLines.joined(separator: "\n")
+                }
             }
             .sheet(isPresented: $showMailComposer) {
                 MailComposerView(
@@ -108,20 +119,18 @@ struct LogView: View {
     }
 
     private func loadLog() {
+        let text = AppLogger.shared.readLog()
 
-        let url = AppLogger.shared.fileURL
-
-        guard
-            let data = try? Data(contentsOf: url),
-            let text = String(
-                data: data,
-                encoding: .utf8
-            )
-        else {
+        guard !text.isEmpty else {
             return
         }
 
-        logText = text
+        // Показуємо останні 1000 рядків,
+        // щоб LogView не намагався відрендерити величезний файл.
+        let lines = text.components(separatedBy: "\n")
+        let recentLines = lines.suffix(1000)
+
+        logText = recentLines.joined(separator: "\n")
     }
 }
 

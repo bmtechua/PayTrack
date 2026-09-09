@@ -22,11 +22,12 @@ extension SyncService {
         log: String
     ) async throws {
 
-        let user = try await client.auth.session.user
+        let user =
+            try? await client.auth.session.user
 
         struct DiagnosticReport: Encodable {
 
-            let user_id: UUID
+            let user_id: UUID?
             let email: String?
             let problem_description: String
             let app_version: String
@@ -37,8 +38,8 @@ extension SyncService {
         }
 
         let report = DiagnosticReport(
-            user_id: user.id,
-            email: user.email,
+            user_id: user?.id,
+            email: user?.email,
             problem_description: problemDescription,
             app_version: appVersion,
             app_build: appBuild,
