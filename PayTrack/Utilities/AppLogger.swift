@@ -247,16 +247,69 @@ final class AppLogger {
     ) {
 
         let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
 
-        formatter.dateFormat =
-            "yyyy-MM-dd HH:mm:ss"
+        let now = Date()
+        let date = formatter.string(from: now)
+        let currentDay = String(date.prefix(10))
 
-        let date =
-            formatter.string(
-                from: Date()
-            )
+        var daySeparator = ""
+
+        if fileManager.fileExists(
+            atPath: currentLogURL.path
+        ) {
+
+            if let existingData =
+                try? Data(contentsOf: currentLogURL),
+               let existingText =
+                String(
+                    data: existingData,
+                    encoding: .utf8
+                ) {
+
+                let lines =
+                    existingText.components(
+                        separatedBy: "\n"
+                    )
+
+                if let lastLine =
+                    lines.reversed().first(where: {
+                        !$0.isEmpty
+                    }) {
+
+                    let lastDay =
+                        String(lastLine.prefix(11))
+                            .replacingOccurrences(
+                                of: "[",
+                                with: ""
+                            )
+
+                    if lastDay != currentDay {
+
+                        daySeparator =
+                            "\n\n" +
+                            "[\(currentDay)]\n" +
+                            "────────────────────────────────\n"
+                    }
+
+                } else {
+
+                    daySeparator =
+                        "[\(currentDay)]\n" +
+                        "────────────────────────────────\n"
+                }
+
+            }
+
+        } else {
+
+            daySeparator =
+                "[\(currentDay)]\n" +
+                "────────────────────────────────\n"
+        }
 
         let line =
+            "\(daySeparator)" +
             "[\(date)] \(level) [\(category.rawValue)]: \(message)\n"
 
         guard let data =

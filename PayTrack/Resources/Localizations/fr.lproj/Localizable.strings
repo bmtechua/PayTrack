@@ -69,6 +69,7 @@
 "cancel" = "Annuler";
 "add" = "Ajouter";
 
+"yesterday" = "Hier";
 "by_days" = "Par jour";
 "top_category" = "Catégorie principale";
 "no_data" = "Pas de données";

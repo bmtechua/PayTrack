@@ -29,10 +29,15 @@ struct ExpensesListView: View {
     @State
     private var selectedExpense: Expense?
 
+    // MARK: - Visible Expenses
+
     private var visibleExpenses: [Expense] {
+
         guard let userID = authService.user?.id else {
+
             // Free mode:
             // show only expenses without Premium owner
+
             return expenses.filter {
                 $0.userID == nil
             }
@@ -40,10 +45,71 @@ struct ExpensesListView: View {
 
         // Premium mode:
         // show only expenses belonging to current user
+
         return expenses.filter {
             $0.userID == userID
         }
     }
+
+    // MARK: - Grouped Expenses
+
+    private var groupedExpenses:
+        [(date: Date, title: String, expenses: [Expense])] {
+
+        let calendar = Calendar.current
+
+        let grouped =
+            Dictionary(
+                grouping: visibleExpenses
+            ) { expense in
+
+                calendar.startOfDay(
+                    for: expense.date ?? Date()
+                )
+            }
+
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        formatter.timeStyle = .none
+
+        return grouped
+            .sorted { $0.key > $1.key }
+            .map { date, expenses in
+
+                let title: String
+
+                if calendar.isDateInToday(date) {
+
+                    title = String(
+                        localized: "today"
+                    )
+
+                } else if calendar.isDateInYesterday(date) {
+
+                    title = String(
+                        localized: "yesterday"
+                    )
+
+                } else {
+
+                    title = formatter.string(
+                        from: date
+                    )
+                }
+
+                return (
+                    date: date,
+                    title: title,
+                    expenses: expenses.sorted {
+                        ($0.date ?? Date.distantPast)
+                        >
+                        ($1.date ?? Date.distantPast)
+                    }
+                )
+            }
+    }
+
+    // MARK: - Body
 
     var body: some View {
 
@@ -51,29 +117,48 @@ struct ExpensesListView: View {
 
             List {
 
-                ForEach(visibleExpenses) { expense in
+                ForEach(
+                    groupedExpenses,
+                    id: \.date
+                ) { group in
 
-                    Button {
+                    Section {
 
-                        selectedExpense = expense
+                        ForEach(
+                            group.expenses
+                        ) { expense in
 
-                    } label: {
+                            Button {
 
-                        ExpenseRowView(
-                            expense: expense
-                        )
+                                selectedExpense = expense
+
+                            } label: {
+
+                                ExpenseRowView(
+                                    expense: expense
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .onDelete { offsets in
+
+                            deleteExpense(
+                                offsets: offsets,
+                                expenses: group.expenses
+                            )
+                        }
+
+                    } header: {
+
+                        Text(group.title)
                     }
-                    .buttonStyle(.plain)
                 }
-
-                .onDelete(
-                    perform: deleteExpense
-                )
             }
-
             .navigationTitle("all_expenses")
 
-            .sheet(item: $selectedExpense) { expense in
+            .sheet(
+                item: $selectedExpense
+            ) { expense in
 
                 EditExpenseView(
                     expense: expense
@@ -88,13 +173,16 @@ struct ExpensesListView: View {
 
     // MARK: - Delete
 
-    private func deleteExpense(offsets: IndexSet) {
+    private func deleteExpense(
+        offsets: IndexSet,
+        expenses: [Expense]
+    ) {
 
         withAnimation {
 
             for index in offsets {
 
-                let expense = visibleExpenses[index]
+                let expense = expenses[index]
 
                 guard let expenseID = expense.id else {
 
@@ -114,6 +202,7 @@ struct ExpensesListView: View {
 
                 // Sync only Premium expenses.
                 // Free expenses stay local.
+
                 if expense.userID != nil {
 
                     Task {
@@ -179,13 +268,16 @@ private struct ExpenseRowView: View {
                 spacing: 5
             ) {
 
-                Text(expense.title ?? "")
-                    .font(.headline)
+                Text(
+                    expense.title ?? ""
+                )
+                .font(.headline)
 
                 HStack {
 
                     Text(
-                        expense.category?.icon ?? "📌"
+                        expense.category?.icon
+                        ?? "📌"
                     )
 
                     Text(
@@ -225,6 +317,8 @@ private struct ExpenseRowView: View {
     ExpensesListView()
         .environment(
             \.managedObjectContext,
-            PersistenceController.preview.container.viewContext
+            PersistenceController.preview
+                .container
+                .viewContext
         )
 }
