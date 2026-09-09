@@ -25,6 +25,11 @@ extension SyncService {
         let user =
             try? await client.auth.session.user
 
+        AppLogger.shared.info(
+            "Diagnostic report user: \(user?.email ?? "nil"), id: \(user?.id.uuidString ?? "nil")",
+            category: .auth
+        )
+
         struct DiagnosticReport: Encodable {
 
             let user_id: UUID?
@@ -35,17 +40,44 @@ extension SyncService {
             let device_model: String
             let system_version: String
             let log: String
+            let plan: String
+            let status: String
         }
 
+        let plan =
+            user == nil
+            ? "Free"
+            : "Premium"
+
         let report = DiagnosticReport(
+
             user_id: user?.id,
+
             email: user?.email,
-            problem_description: problemDescription,
-            app_version: appVersion,
-            app_build: appBuild,
-            device_model: deviceModel,
-            system_version: systemVersion,
-            log: log
+
+            problem_description:
+                problemDescription,
+
+            app_version:
+                appVersion,
+
+            app_build:
+                appBuild,
+
+            device_model:
+                deviceModel,
+
+            system_version:
+                systemVersion,
+
+            log:
+                log,
+
+            plan:
+                plan,
+
+            status:
+                "New"
         )
 
         try await client
@@ -54,7 +86,7 @@ extension SyncService {
             .execute()
 
         AppLogger.shared.info(
-            "Diagnostic report sent successfully",
+            "Diagnostic report sent successfully: plan=\(plan)",
             category: .app
         )
     }
