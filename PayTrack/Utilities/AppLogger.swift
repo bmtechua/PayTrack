@@ -202,18 +202,88 @@ final class AppLogger {
 
     func readLog() -> String {
 
-        do {
-
-            return try String(
+        guard
+            let text = try? String(
                 contentsOf: currentLogURL,
                 encoding: .utf8
             )
-
-        } catch {
-
+        else {
             return ""
         }
+
+        let lines = text.components(separatedBy: "\n")
+
+        var logsByDay: [String: [String]] = [:]
+        var dayOrder: [String] = []
+
+        for line in lines {
+
+            guard line.hasPrefix("["),
+                  line.count >= 12
+            else {
+                continue
+            }
+
+            let dateStart = line.index(
+                after: line.startIndex
+            )
+
+            let dateEnd = line.index(
+                dateStart,
+                offsetBy: 10,
+                limitedBy: line.endIndex
+            )
+
+            guard let dateEnd else {
+                continue
+            }
+
+            let day = String(
+                line[line.startIndex...dateEnd]
+            )
+
+            guard day.hasPrefix("[") else {
+                continue
+            }
+
+            let cleanDay = day
+                .replacingOccurrences(of: "[", with: "")
+                .replacingOccurrences(of: "]", with: "")
+
+            if !cleanDay.contains("-") {
+                continue
+            }
+
+            if logsByDay[cleanDay] == nil {
+                logsByDay[cleanDay] = []
+                dayOrder.append(cleanDay)
+            }
+
+            logsByDay[cleanDay]?.append(line)
+        }
+
+        let sortedDays = dayOrder.sorted(by: >)
+
+        var result: [String] = []
+
+        for day in sortedDays {
+
+            result.append("[\(day)]")
+            result.append(
+                "────────────────────────────────"
+            )
+
+            if let dayLogs = logsByDay[day] {
+
+                result.append(contentsOf: dayLogs.reversed())
+            }
+
+            result.append("")
+        }
+
+        return result.joined(separator: "\n")
     }
+
 
     // MARK: - Clear Log
 
