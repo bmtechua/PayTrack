@@ -8,6 +8,7 @@
 import Foundation
 import os
 
+
 final class AppLogger {
 
     static let shared = AppLogger()

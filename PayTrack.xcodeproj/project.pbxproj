@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CE4FBAB8305456290040D928 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = CE4FBAB7305456290040D928 /* LinkKit */; };
+		CE4FBABA305456290040D928 /* LinkKitObjC in Frameworks */ = {isa = PBXBuildFile; productRef = CE4FBAB9305456290040D928 /* LinkKitObjC */; };
 		CE65FF31303F530E006E659A /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = CE65FF30303F530E006E659A /* Auth */; };
 		CE65FF37303F5788006E659A /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = CE65FF36303F5788006E659A /* Supabase */; };
 /* End PBXBuildFile section */
@@ -41,8 +43,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CE4FBAB8305456290040D928 /* LinkKit in Frameworks */,
 				CE65FF37303F5788006E659A /* Supabase in Frameworks */,
 				CE65FF31303F530E006E659A /* Auth in Frameworks */,
+				CE4FBABA305456290040D928 /* LinkKitObjC in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -95,6 +99,8 @@
 			packageProductDependencies = (
 				CE65FF30303F530E006E659A /* Auth */,
 				CE65FF36303F5788006E659A /* Supabase */,
+				CE4FBAB7305456290040D928 /* LinkKit */,
+				CE4FBAB9305456290040D928 /* LinkKitObjC */,
 			);
 			productName = PayTrack;
 			productReference = CE7CC4532FF303AF00CCFC86 /* PayTrack.app */;
@@ -128,6 +134,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				CE65FF2F303F530E006E659A /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				CE4FBAB6305456290040D928 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CE7CC4542FF303AF00CCFC86 /* Products */;
@@ -373,6 +380,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		CE4FBAB6305456290040D928 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/plaid/plaid-link-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.1.1;
+			};
+		};
 		CE65FF2F303F530E006E659A /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift";
@@ -384,6 +399,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		CE4FBAB7305456290040D928 /* LinkKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CE4FBAB6305456290040D928 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */;
+			productName = LinkKit;
+		};
+		CE4FBAB9305456290040D928 /* LinkKitObjC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CE4FBAB6305456290040D928 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */;
+			productName = LinkKitObjC;
+		};
 		CE65FF30303F530E006E659A /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = CE65FF2F303F530E006E659A /* XCRemoteSwiftPackageReference "supabase-swift" */;

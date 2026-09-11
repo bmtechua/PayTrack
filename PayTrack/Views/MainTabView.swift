@@ -48,6 +48,14 @@ struct MainTabView: View {
                         systemImage: "gear"
                     )
                 }
+            
+            PlaidTestView()
+                .tabItem {
+                    Label(
+                        "Plaid Test",
+                        systemImage: "building.columns"
+                    )
+                }
         }
 
         .sheet(
