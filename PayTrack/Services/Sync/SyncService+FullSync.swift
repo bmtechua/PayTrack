@@ -12,7 +12,6 @@ extension SyncService {
     // MARK: - Current user
 
     private func currentUserID() async throws -> UUID {
-
         let user =
             try await client.auth.session.user
 
@@ -25,7 +24,7 @@ extension SyncService {
         for userID: UUID
     ) async throws -> [[String: AnyJSON]] {
 
-        return try await client
+        let response = try await client
             .from("categories")
             .select()
             .eq(
@@ -33,7 +32,11 @@ extension SyncService {
                 value: userID.uuidString
             )
             .execute()
-            .value
+
+        return try JSONDecoder().decode(
+            [[String: AnyJSON]].self,
+            from: response.data
+        )
     }
 
     // MARK: - Download remote expenses
@@ -42,7 +45,7 @@ extension SyncService {
         for userID: UUID
     ) async throws -> [[String: AnyJSON]] {
 
-        return try await client
+        let response = try await client
             .from("expenses")
             .select()
             .eq(
@@ -50,7 +53,11 @@ extension SyncService {
                 value: userID.uuidString
             )
             .execute()
-            .value
+
+        return try JSONDecoder().decode(
+            [[String: AnyJSON]].self,
+            from: response.data
+        )
     }
 
     // MARK: - Merge remote category
@@ -144,36 +151,89 @@ extension SyncService {
             return
         }
 
-        let request: NSFetchRequest<Expense> =
+        let remoteTransactionID: String?
+
+        if case let .string(value) =
+            remoteExpense["transaction_id"],
+            !value.isEmpty {
+
+            remoteTransactionID = value
+
+        } else {
+
+            remoteTransactionID = nil
+        }
+
+        // -------------------------------------------------
+        // 1. First try to find expense by local ID.
+        // -------------------------------------------------
+
+        let idRequest: NSFetchRequest<Expense> =
             Expense.fetchRequest()
 
-        request.fetchLimit = 1
+        idRequest.fetchLimit = 1
 
-        request.predicate =
+        idRequest.predicate =
             NSPredicate(
                 format: "id == %@ AND userID == %@",
                 expenseID as CVarArg,
                 userID as CVarArg
             )
 
-        let expense: Expense
+        var expense =
+            try context.fetch(idRequest).first
 
-        if let existing =
-            try context.fetch(request).first {
+        // -------------------------------------------------
+        // 2. If this is a Plaid transaction,
+        //    also search by transactionID.
+        // -------------------------------------------------
 
-            expense = existing
+        if expense == nil,
+           let transactionID = remoteTransactionID {
 
-        } else {
+            let transactionRequest:
+                NSFetchRequest<Expense> =
+                Expense.fetchRequest()
+
+            transactionRequest.fetchLimit = 1
+
+            transactionRequest.predicate =
+                NSPredicate(
+                    format:
+                        "transactionID == %@ AND userID == %@",
+                    transactionID,
+                    userID as CVarArg
+                )
+
+            expense =
+                try context.fetch(
+                    transactionRequest
+                ).first
+        }
+
+        // -------------------------------------------------
+        // 3. Create new expense only if nothing exists.
+        // -------------------------------------------------
+
+        if expense == nil {
 
             expense =
                 Expense(context: context)
 
-            expense.id =
+            expense?.id =
                 expenseID
 
-            expense.userID =
+            expense?.userID =
                 userID
         }
+
+        guard let expense else {
+            return
+        }
+
+        // -------------------------------------------------
+        // 4. Update expense data.
+        // -------------------------------------------------
 
         if case let .string(value) =
             remoteExpense["title"] {
@@ -198,7 +258,6 @@ extension SyncService {
                     Double(value)
 
             default:
-
                 break
             }
         }
@@ -231,17 +290,17 @@ extension SyncService {
                 value
         }
 
-        if case let .string(value) =
-            remoteExpense["transaction_id"] {
+        if let transactionID =
+            remoteTransactionID {
 
             expense.transactionID =
-                value
+                transactionID
         }
 
         if case let .string(categoryIDString) =
             remoteExpense["category_id"],
-            let categoryID =
-                UUID(uuidString: categoryIDString) {
+           let categoryID =
+            UUID(uuidString: categoryIDString) {
 
             expense.category =
                 categoriesByID[categoryID]
@@ -310,14 +369,16 @@ extension SyncService {
                     premiumCategories.first {
 
                         guard
-                            let premiumName = $0.name
+                            let premiumName =
+                                $0.name
                         else {
                             return false
                         }
 
                         return premiumName
                             .trimmingCharacters(
-                                in: .whitespacesAndNewlines
+                                in:
+                                    .whitespacesAndNewlines
                             )
                             .caseInsensitiveCompare(
                                 freeName
@@ -366,7 +427,8 @@ extension SyncService {
 
                 expenseRequest.predicate =
                     NSPredicate(
-                        format: "category == %@",
+                        format:
+                            "category == %@",
                         freeCategory
                     )
 
@@ -385,7 +447,6 @@ extension SyncService {
                 }
 
                 // Free category remains untouched.
-
                 continue
             }
 
@@ -395,14 +456,16 @@ extension SyncService {
                 premiumCategories.first {
 
                     guard
-                        let premiumName = $0.name
+                        let premiumName =
+                            $0.name
                     else {
                         return false
                     }
 
                     return premiumName
                         .trimmingCharacters(
-                            in: .whitespacesAndNewlines
+                            in:
+                                .whitespacesAndNewlines
                         )
                         .caseInsensitiveCompare(
                             freeName
@@ -418,7 +481,8 @@ extension SyncService {
 
                 expenseRequest.predicate =
                     NSPredicate(
-                        format: "category == %@",
+                        format:
+                            "category == %@",
                         freeCategory
                     )
 
@@ -467,7 +531,8 @@ extension SyncService {
 
         request.predicate =
             NSPredicate(
-                format: "userID == nil"
+                format:
+                    "userID == nil"
             )
 
         let freeExpenses =
@@ -503,11 +568,13 @@ extension SyncService {
 
         request.predicate =
             NSPredicate(
-                format: "userID == %@",
+                format:
+                    "userID == %@",
                 userID as CVarArg
             )
 
         request.sortDescriptors = [
+
             NSSortDescriptor(
                 key: "name",
                 ascending: true
@@ -524,12 +591,14 @@ extension SyncService {
 
                 ($0.name ?? "")
                     .trimmingCharacters(
-                        in: .whitespacesAndNewlines
+                        in:
+                            .whitespacesAndNewlines
                     )
                     .lowercased()
             }
 
-        for (_, duplicates) in grouped {
+        for (_, duplicates)
+            in grouped {
 
             guard duplicates.count > 1 else {
                 continue
@@ -576,8 +645,8 @@ extension SyncService {
                     .first!
 
             for duplicate
-            in duplicates
-            where duplicate !== primary {
+                in duplicates
+                where duplicate !== primary {
 
                 let expenseRequest:
                     NSFetchRequest<Expense> =
@@ -585,7 +654,8 @@ extension SyncService {
 
                 expenseRequest.predicate =
                     NSPredicate(
-                        format: "category == %@",
+                        format:
+                            "category == %@",
                         duplicate
                     )
 
@@ -619,7 +689,6 @@ extension SyncService {
         }
 
         if context.hasChanges {
-
             try context.save()
         }
 
@@ -641,7 +710,8 @@ extension SyncService {
 
         request.predicate =
             NSPredicate(
-                format: "userID == %@",
+                format:
+                    "userID == %@",
                 userID as CVarArg
             )
 
@@ -668,7 +738,8 @@ extension SyncService {
 
         request.predicate =
             NSPredicate(
-                format: "userID == %@",
+                format:
+                    "userID == %@",
                 userID as CVarArg
             )
 
@@ -695,7 +766,8 @@ extension SyncService {
 
         request.predicate =
             NSPredicate(
-                format: "userID == %@",
+                format:
+                    "userID == %@",
                 userID as CVarArg
             )
 
@@ -719,11 +791,470 @@ extension SyncService {
         return result
     }
 
+    // MARK: - Remove duplicate Plaid expenses
+
+    private func removeDuplicatePlaidExpenses(
+        for userID: UUID
+    ) throws {
+
+        let request:
+            NSFetchRequest<Expense> =
+            Expense.fetchRequest()
+
+        request.predicate =
+            NSPredicate(
+                format: """
+                userID == %@ AND
+                transactionID != nil AND
+                transactionID != ""
+                """,
+                userID as CVarArg
+            )
+
+        let expenses =
+            try context.fetch(request)
+
+        let grouped =
+            Dictionary(
+                grouping: expenses
+            ) { expense in
+
+                expense.transactionID ?? ""
+            }
+
+        var removedCount = 0
+
+        for (transactionID, duplicates)
+            in grouped {
+
+            guard
+                !transactionID.isEmpty,
+                duplicates.count > 1
+            else {
+                continue
+            }
+
+            let primary =
+                duplicates.sorted {
+
+                    first, second in
+
+                    let firstIsPlaid =
+                        first.source == "plaid"
+
+                    let secondIsPlaid =
+                        second.source == "plaid"
+
+                    if firstIsPlaid !=
+                        secondIsPlaid {
+
+                        return firstIsPlaid
+                    }
+
+                    return (
+                        first.id?.uuidString ?? ""
+                    ) < (
+                        second.id?.uuidString ?? ""
+                    )
+                }
+                .first!
+
+            for duplicate
+                in duplicates
+                where duplicate !== primary {
+
+                context.delete(
+                    duplicate
+                )
+
+                removedCount += 1
+
+                AppLogger.shared.info(
+                    "Duplicate Plaid expense removed: \(duplicate.title ?? "Unknown")",
+                    category: .coreData
+                )
+            }
+        }
+
+        if context.hasChanges {
+            try context.save()
+        }
+
+        AppLogger.shared.info(
+            "Duplicate Plaid expense cleanup completed. Removed: \(removedCount)",
+            category: .coreData
+        )
+    }
+
+    // MARK: - Remove remote Plaid Sandbox duplicates
+
+    private func removeRemotePlaidSandboxDuplicates(
+        for userID: UUID
+    ) async {
+
+        do {
+
+            let response = try await client
+                .from("expenses")
+                .select(
+                    "id,title,amount,date,source,created_at"
+                )
+                .eq(
+                    "user_id",
+                    value: userID.uuidString
+                )
+                .eq(
+                    "source",
+                    value: "plaid"
+                )
+                .execute()
+
+            let remoteExpenses =
+                try JSONDecoder().decode(
+                    [[String: AnyJSON]].self,
+                    from: response.data
+                )
+
+            var calendar =
+                Calendar(
+                    identifier: .gregorian
+                )
+
+            calendar.timeZone =
+                TimeZone(
+                    secondsFromGMT: 0
+                )!
+
+            let isoFormatter =
+                ISO8601DateFormatter()
+
+            isoFormatter.formatOptions = [
+                .withInternetDateTime,
+                .withFractionalSeconds
+            ]
+
+            isoFormatter.timeZone =
+                TimeZone(
+                    secondsFromGMT: 0
+                )
+
+            struct RemotePlaidExpense {
+
+                let id: UUID
+                let title: String
+                let amount: Double
+                let date: Date
+                let createdAt: Date?
+            }
+
+            var parsedExpenses:
+                [RemotePlaidExpense] =
+                []
+
+            for record
+                in remoteExpenses {
+
+                guard
+                    case let .string(idString) =
+                        record["id"],
+                    let id =
+                        UUID(
+                            uuidString: idString
+                        ),
+                    case let .string(title) =
+                        record["title"],
+                    let amountJSON =
+                        record["amount"],
+                    case let .string(dateString) =
+                        record["date"],
+                    let date =
+                        isoFormatter.date(
+                            from: dateString
+                        )
+                else {
+                    continue
+                }
+
+                let amount: Double
+
+                switch amountJSON {
+
+                case .double(let value):
+
+                    amount =
+                        value
+
+                case .integer(let value):
+
+                    amount =
+                        Double(value)
+
+                default:
+
+                    continue
+                }
+
+                var createdAt: Date?
+
+                if case let .string(createdAtString) =
+                    record["created_at"] {
+
+                    createdAt =
+                        isoFormatter.date(
+                            from:
+                                createdAtString
+                        )
+                }
+
+                parsedExpenses.append(
+                    RemotePlaidExpense(
+                        id: id,
+                        title: title,
+                        amount: amount,
+                        date: date,
+                        createdAt: createdAt
+                    )
+                )
+            }
+
+            let grouped =
+                Dictionary(
+                    grouping:
+                        parsedExpenses
+                ) { expense in
+
+                    let day =
+                        calendar.startOfDay(
+                            for:
+                                expense.date
+                        )
+
+                    let components =
+                        calendar.dateComponents(
+                            [
+                                .year,
+                                .month,
+                                .day
+                            ],
+                            from: day
+                        )
+
+                    let year =
+                        components.year ?? 0
+
+                    let month =
+                        components.month ?? 0
+
+                    let dayValue =
+                        components.day ?? 0
+
+                    let normalizedTitle =
+                        expense.title
+                            .trimmingCharacters(
+                                in:
+                                    .whitespacesAndNewlines
+                            )
+                            .lowercased()
+
+                    return
+                        "\(normalizedTitle)|\(expense.amount)|\(year)-\(month)-\(dayValue)"
+                }
+
+            var removedCount = 0
+
+            for (key, duplicates)
+                in grouped {
+
+                guard duplicates.count > 1 else {
+                    continue
+                }
+
+                let sorted =
+                    duplicates.sorted {
+                        first, second in
+
+                        switch (
+                            first.createdAt,
+                            second.createdAt
+                        ) {
+
+                        case (
+                            let firstDate?,
+                            let secondDate?
+                        ):
+
+                            if firstDate !=
+                                secondDate {
+
+                                return firstDate <
+                                    secondDate
+                            }
+
+                        case (
+                            _?,
+                            nil
+                        ):
+
+                            return true
+
+                        case (
+                            nil,
+                            _?
+                        ):
+
+                            return false
+
+                        default:
+                            break
+                        }
+
+                        return first.id.uuidString <
+                            second.id.uuidString
+                    }
+
+                guard let primary =
+                    sorted.first
+                else {
+                    continue
+                }
+
+                for duplicate
+                    in sorted.dropFirst() {
+
+                    try await client
+                        .from("expenses")
+                        .delete()
+                        .eq(
+                            "id",
+                            value:
+                                duplicate.id.uuidString
+                        )
+                        .eq(
+                            "user_id",
+                            value:
+                                userID.uuidString
+                        )
+                        .execute()
+
+                    removedCount += 1
+
+                    AppLogger.shared.info(
+                        """
+                        [SYNC] Plaid Sandbox remote duplicate removed:
+                        title=\(duplicate.title)
+                        amount=\(duplicate.amount)
+                        date=\(duplicate.date)
+                        remoteID=\(duplicate.id.uuidString)
+                        keptID=\(primary.id.uuidString)
+                        key=\(key)
+                        """,
+                        category: .sync
+                    )
+                }
+            }
+
+            AppLogger.shared.info(
+                "Plaid Sandbox remote duplicate cleanup completed. Removed: \(removedCount)",
+                category: .sync
+            )
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Plaid Sandbox remote duplicate cleanup failed: \(error.localizedDescription)",
+                category: .sync
+            )
+        }
+    }
+
+    // MARK: - Sync Plaid expenses
+
+    private func syncPlaidExpenses() async {
+
+        do {
+
+            let user =
+                try await client.auth.session.user
+
+            let response =
+                try await client
+                    .from("bank_connections")
+                    .select("id")
+                    .eq(
+                        "user_id",
+                        value:
+                            user.id.uuidString
+                    )
+                    .eq(
+                        "status",
+                        value: "active"
+                    )
+                    .limit(1)
+                    .execute()
+
+            struct BankConnection: Decodable {
+
+                let id: UUID
+            }
+
+            let connections =
+                try JSONDecoder().decode(
+                    [BankConnection].self,
+                    from: response.data
+                )
+
+            guard
+                let connection =
+                    connections.first
+            else {
+
+                AppLogger.shared.info(
+                    "No active Plaid bank connection",
+                    category: .sync
+                )
+
+                return
+            }
+
+            let expenses =
+                try await PlaidExpenseService.shared.fetchExpenses(
+                    connectionID:
+                        connection.id.uuidString
+                            .lowercased()
+                )
+
+            AppLogger.shared.info(
+                "Plaid expenses received: \(expenses.count)",
+                category: .sync
+            )
+
+            await importPlaidExpenses(
+                expenses
+            )
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Plaid sync failed: \(error.localizedDescription)",
+                category: .sync
+            )
+        }
+    }
+
     // MARK: - Full sync
 
     func syncAll() async {
 
-        fullSyncTask?.cancel()
+        if let existingTask = fullSyncTask {
+
+            AppLogger.shared.info(
+                "Full sync already running. Waiting for existing sync.",
+                category: .sync
+            )
+
+            await existingTask.value
+            return
+        }
 
         let task =
             Task { @MainActor [weak self] in
@@ -739,6 +1270,9 @@ extension SyncService {
             task
 
         await task.value
+
+        fullSyncTask =
+            nil
     }
 
     // MARK: - Perform full sync
@@ -767,7 +1301,7 @@ extension SyncService {
             try Task.checkCancellation()
 
             for remoteCategory
-            in remoteCategories {
+                in remoteCategories {
 
                 _ = try mergeRemoteCategory(
                     remoteCategory,
@@ -800,7 +1334,17 @@ extension SyncService {
             try Task.checkCancellation()
 
             // -------------------------------------------------
-            // 4. Remove old local Premium duplicates.
+            // 4. Remove duplicate Plaid expenses.
+            // -------------------------------------------------
+
+            try removeDuplicatePlaidExpenses(
+                for: userID
+            )
+
+            try Task.checkCancellation()
+
+            // -------------------------------------------------
+            // 5. Remove old local Premium duplicates.
             // -------------------------------------------------
 
             try removeDuplicateLocalCategories(
@@ -810,7 +1354,7 @@ extension SyncService {
             try Task.checkCancellation()
 
             // -------------------------------------------------
-            // 5. Upload unique Premium categories.
+            // 6. Upload unique Premium categories.
             // -------------------------------------------------
 
             try await uploadLocalCategories(
@@ -820,7 +1364,7 @@ extension SyncService {
             try Task.checkCancellation()
 
             // -------------------------------------------------
-            // 6. Upload Premium expenses.
+            // 7. Upload Premium expenses.
             // -------------------------------------------------
 
             try await uploadLocalExpenses(
@@ -830,7 +1374,7 @@ extension SyncService {
             try Task.checkCancellation()
 
             // -------------------------------------------------
-            // 7. Download Premium expenses.
+            // 8. Download Premium expenses.
             // -------------------------------------------------
 
             let remoteExpenses =
@@ -841,7 +1385,7 @@ extension SyncService {
             try Task.checkCancellation()
 
             // -------------------------------------------------
-            // 8. Build category map.
+            // 9. Build category map.
             // -------------------------------------------------
 
             let categoriesByID =
@@ -852,11 +1396,11 @@ extension SyncService {
             try Task.checkCancellation()
 
             // -------------------------------------------------
-            // 9. Merge remote expenses.
+            // 10. Merge remote expenses.
             // -------------------------------------------------
 
             for remoteExpense
-            in remoteExpenses {
+                in remoteExpenses {
 
                 try Task.checkCancellation()
 
@@ -869,6 +1413,26 @@ extension SyncService {
             }
 
             try context.save()
+
+            try Task.checkCancellation()
+
+            // -------------------------------------------------
+            // 11. Sync Plaid expenses.
+            // -------------------------------------------------
+
+            await syncPlaidExpenses()
+
+            try Task.checkCancellation()
+
+            // -------------------------------------------------
+            // 12. Remove remote Plaid Sandbox duplicates.
+            // -------------------------------------------------
+
+            await removeRemotePlaidSandboxDuplicates(
+                for: userID
+            )
+
+            try Task.checkCancellation()
 
             AppLogger.shared.info(
                 "Full sync completed: \(categoriesByID.count) categories, \(remoteExpenses.count) remote expenses",

@@ -20,6 +20,31 @@ struct PlaidTestView: View {
             Button("Підключити банк") {
                 getLinkToken()
             }
+            
+            Button("Завантажити витрати") {
+                Task {
+                    do {
+                        let expenses = try await PlaidExpenseService.shared.fetchExpenses(
+                            connectionID: "3ed03dca-fb0a-4107-b60d-fe028f6328f4"
+                        )
+
+                        print("✅ Отримано витрат: \(expenses.count)")
+
+                        for expense in expenses {
+                            print(
+                                "💰 \(expense.title ?? "") | " +
+                                "\(expense.amount) | " +
+                                "\(expense.category)"
+                            )
+                        }
+                        
+                        await SyncService.shared.importPlaidExpenses(expenses)
+
+                    } catch {
+                        print("❌ Помилка отримання витрат: \(error)")
+                    }
+                }
+            }
         }
         .sheet(isPresented: $showPlaid) {
 
