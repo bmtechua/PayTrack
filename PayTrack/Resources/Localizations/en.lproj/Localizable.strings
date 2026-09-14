@@ -138,3 +138,48 @@
 "send_report" = "Send Report";
 "report_sent" = "Report sent successfully";
 "report_error" = "Failed to send report";
+
+"engineering" = "Engineering";
+
+"engineering_full_sync" = "Full Sync";
+"engineering_sync_plaid" = "Sync Plaid";
+"engineering_bank_connection" = "Bank connection";
+"engineering_remove_duplicates" = "Remove duplicate Plaid expenses";
+"engineering_delete_local" = "Delete local Plaid expenses";
+"engineering_delete_remote" = "Delete remote Plaid expenses";
+"engineering_sync_statistics" = "Sync statistics";
+"engineering_plaid_connections" = "Plaid connections";
+"engineering_realtime_test" = "Realtime test";
+"engineering_logs" = "Logs";
+"engineering_reset_sync" = "Reset sync state";
+
+"engineering_run_full_sync" = "Run Full Sync?";
+"engineering_sync_plaid_question" = "Sync Plaid?";
+"engineering_connect_bank" = "Connect bank account?";
+"engineering_remove_duplicates_question" = "Remove duplicate Plaid expenses?";
+"engineering_delete_local_question" = "Delete local Plaid expenses?";
+"engineering_delete_remote_question" = "Delete all remote Plaid expenses?";
+"engineering_reset_sync_question" = "Reset sync state?";
+
+"engineering_full_sync_message" = "This will synchronize categories, expenses, profile settings and Plaid data.";
+"engineering_sync_plaid_message" = "This will synchronize expenses from the active Plaid connection.";
+"engineering_connect_bank_message" = "This will open Plaid to connect a bank account.";
+"engineering_remove_duplicates_message" = "Duplicate Plaid expenses in Supabase will be removed.";
+"engineering_delete_local_message" = "This will permanently delete all local Plaid expenses from this device.";
+"engineering_delete_remote_message" = "This will permanently delete all Plaid expenses from Supabase. Local expenses on this device will remain.";
+"engineering_reset_sync_message" = "This will cancel the current Full Sync operation. No local or remote data will be deleted.";
+
+"run" = "Run";
+"sync" = "Sync";
+"continue" = "Continue";
+"remove" = "Remove";
+"delete" = "Delete";
+"reset" = "Reset";
+
+"bank_connection" = "Bank connection";
+"bank_connection_plaid" = "Connect with Plaid";
+"bank_connection_connected" = "Connected banks";
+"bank_connection_none" = "No connected banks";
+"bank_connection_duplicate" = "This bank account is already connected.";
+
+

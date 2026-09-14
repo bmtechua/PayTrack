@@ -107,6 +107,18 @@ struct AccountView: View {
 
                 Text(user.email ?? "")
             }
+            
+            Section {
+
+                NavigationLink {
+                    BankConnectionView()
+                } label: {
+                    Label(
+                        "bank_connection",
+                        systemImage: "building.columns"
+                    )
+                }
+            }
 
             Section {
 

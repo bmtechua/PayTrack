@@ -28,123 +28,36 @@ extension SyncService {
             }
 
             expense.userID = user.id
-
             var remoteID = expenseID.uuidString
 
-            // MARK: Plaid Sandbox protection
-            //
-            // Sandbox can generate different transaction IDs
-            // for the same logical transaction.
-            //
-            // Temporarily match by:
-            // user + source + title + amount + UTC calendar day.
-            //
-            // Production should rely on real Plaid transaction_id.
-
             if expense.source == "plaid",
-               let title = expense.title,
-               let date = expense.date {
+               let transactionID = expense.transactionID,
+               !transactionID.isEmpty {
 
-                var calendar = Calendar(
-                    identifier: .gregorian
-                )
-
-                calendar.timeZone = TimeZone(
-                    secondsFromGMT: 0
-                )!
-
-                let startOfDay = calendar.startOfDay(
-                    for: date
-                )
-
-                guard let endOfDay = calendar.date(
-                    byAdding: .day,
-                    value: 1,
-                    to: startOfDay
-                ) else {
-                    return
+                struct ExistingExpense: Decodable {
+                    let id: UUID
                 }
 
-                let formatter = ISO8601DateFormatter()
-
-                formatter.formatOptions = [
-                    .withInternetDateTime,
-                    .withFractionalSeconds
-                ]
-
-                formatter.timeZone = TimeZone(
-                    secondsFromGMT: 0
-                )
-
-                let startString = formatter.string(
-                    from: startOfDay
-                )
-
-                let endString = formatter.string(
-                    from: endOfDay
-                )
-
-                let remoteExpenses = try await client
+                let response = try await client
                     .from("expenses")
-                    .select(
-                        "id,title,amount,date,source"
-                    )
-                    .eq(
-                        "user_id",
-                        value: user.id.uuidString
-                    )
-                    .eq(
-                        "source",
-                        value: "plaid"
-                    )
-                    .eq(
-                        "title",
-                        value: title
-                    )
-                    .eq(
-                        "amount",
-                        value: expense.amount
-                    )
-                    .gte(
-                        "date",
-                        value: startString
-                    )
-                    .lt(
-                        "date",
-                        value: endString
-                    )
+                    .select("id")
+                    .eq("user_id", value: user.id.uuidString)
+                    .eq("source", value: "plaid")
+                    .eq("transaction_id", value: transactionID)
                     .limit(1)
                     .execute()
 
-                struct RemoteExpense: Decodable {
-
-                    let id: UUID
-                    let title: String
-                    let amount: Double
-                    let date: String
-                    let source: String
-                }
-
-                let existing = try JSONDecoder().decode(
-                    [RemoteExpense].self,
-                    from: remoteExpenses.data
+                let existingExpenses = try JSONDecoder().decode(
+                    [ExistingExpense].self,
+                    from: response.data
                 )
 
-                if let existingExpense = existing.first {
-
+                if let existingExpense = existingExpenses.first {
                     remoteID = existingExpense.id.uuidString
 
-                    AppLogger.shared.info(
-                        """
-                        Plaid Sandbox remote duplicate matched:
-
-                        title=\(title)
-                        amount=\(expense.amount)
-                        date=\(date)
-                        remoteID=\(remoteID)
-                        """,
-                        category: .sync
-                    )
+                    if expense.id != existingExpense.id {
+                        expense.id = existingExpense.id
+                    }
                 }
             }
 
@@ -233,7 +146,7 @@ extension SyncService {
                     continue
                 }
 
-                // MARK: 1. Exact transaction ID
+                // MARK: 1. Find existing expense by Plaid transaction ID
 
                 let transactionRequest: NSFetchRequest<Expense> =
                     Expense.fetchRequest()
@@ -247,99 +160,10 @@ extension SyncService {
                     user.id as CVarArg
                 )
 
-                if try context.fetch(
-                    transactionRequest
-                ).first != nil {
+                let existingExpense =
+                    try context.fetch(transactionRequest).first
 
-                    AppLogger.shared.info(
-                        "Plaid expense skipped: transaction already exists: \(transactionID)",
-                        category: .sync
-                    )
-
-                    continue
-                }
-
-                // MARK: 2. Plaid Sandbox logical duplicate
-
-                var existingExpense: Expense?
-
-                if let dateString = plaidExpense.date,
-                   let title = plaidExpense.title {
-
-                    let dateFormatter = DateFormatter()
-
-                    dateFormatter.dateFormat = "yyyy-MM-dd"
-
-                    dateFormatter.locale = Locale(
-                        identifier: "en_US_POSIX"
-                    )
-
-                    dateFormatter.timeZone = TimeZone(
-                        secondsFromGMT: 0
-                    )
-
-                    if let plaidDate = dateFormatter.date(
-                        from: dateString
-                    ) {
-
-                        var calendar = Calendar(
-                            identifier: .gregorian
-                        )
-
-                        calendar.timeZone = TimeZone(
-                            secondsFromGMT: 0
-                        )!
-
-                        let startOfDay = calendar.startOfDay(
-                            for: plaidDate
-                        )
-
-                        guard let endOfDay = calendar.date(
-                            byAdding: .day,
-                            value: 1,
-                            to: startOfDay
-                        ) else {
-                            continue
-                        }
-
-                        let logicalRequest:
-                            NSFetchRequest<Expense> =
-                            Expense.fetchRequest()
-
-                        logicalRequest.fetchLimit = 1
-
-                        logicalRequest.sortDescriptors = [
-
-                            NSSortDescriptor(
-                                key: "transactionID",
-                                ascending: true
-                            )
-                        ]
-
-                        logicalRequest.predicate = NSPredicate(
-                            format: """
-                            userID == %@ AND
-                            source == %@ AND
-                            title == %@ AND
-                            amount == %f AND
-                            date >= %@ AND
-                            date < %@
-                            """,
-                            user.id as CVarArg,
-                            "plaid",
-                            title,
-                            plaidExpense.amount,
-                            startOfDay as CVarArg,
-                            endOfDay as CVarArg
-                        )
-
-                        existingExpense = try context.fetch(
-                            logicalRequest
-                        ).first
-                    }
-                }
-
-                // MARK: 3. Reuse existing expense
+                // MARK: 2. Reuse existing or create new expense
 
                 let expense: Expense
 
@@ -348,38 +172,33 @@ extension SyncService {
                     expense = existingExpense
 
                     AppLogger.shared.info(
-                        "Plaid Sandbox duplicate matched existing expense: \(plaidExpense.title ?? "No title")",
+                        "Plaid expense updated: \(transactionID)",
                         category: .sync
                     )
 
                 } else {
-
-                    // MARK: 4. Create new expense
 
                     expense = Expense(
                         context: context
                     )
 
                     expense.id = UUID()
-
                     expense.userID = user.id
-
                     expense.source = "plaid"
+
+                    AppLogger.shared.info(
+                        "Plaid expense created: \(transactionID)",
+                        category: .sync
+                    )
                 }
 
-                // MARK: 5. Update expense
+                // MARK: 3. Update expense
 
                 expense.userID = user.id
-
                 expense.transactionID = transactionID
-
                 expense.amount = plaidExpense.amount
-
                 expense.title = plaidExpense.title
-
-                expense.merchantName =
-                    plaidExpense.merchantName
-
+                expense.merchantName = plaidExpense.merchantName
                 expense.source = "plaid"
 
                 if let dateString = plaidExpense.date {
@@ -401,10 +220,9 @@ extension SyncService {
                     )
                 }
 
-                // MARK: 6. Find category
+                // MARK: 4. Find category
 
-                let categoryRequest:
-                    NSFetchRequest<Category> =
+                let categoryRequest: NSFetchRequest<Category> =
                     Category.fetchRequest()
 
                 categoryRequest.fetchLimit = 1
@@ -429,8 +247,7 @@ extension SyncService {
                         category: .sync
                     )
 
-                    let otherRequest:
-                        NSFetchRequest<Category> =
+                    let otherRequest: NSFetchRequest<Category> =
                         Category.fetchRequest()
 
                     otherRequest.fetchLimit = 1
@@ -447,6 +264,8 @@ extension SyncService {
                     ).first
                 }
 
+                // MARK: 5. Save local expense
+
                 try context.save()
 
                 AppLogger.shared.info(
@@ -454,7 +273,7 @@ extension SyncService {
                     category: .sync
                 )
 
-                // Upload to Supabase.
+                // MARK: 6. Upload/update Supabase expense
 
                 await syncOneExpense(
                     expense
@@ -518,14 +337,11 @@ extension SyncService {
         guard
             case let .string(idString) = record["id"],
             let expenseID = UUID(uuidString: idString),
-
             case let .string(userIDString) =
                 record["user_id"],
-
             let userID = UUID(
                 uuidString: userIDString
             )
-
         else {
 
             AppLogger.shared.error(
@@ -611,7 +427,6 @@ extension SyncService {
             )
 
             expense.id = expenseID
-
             expense.userID = userID
 
             if case let .string(value) =
@@ -721,18 +536,14 @@ extension SyncService {
         guard
             case let .string(idString) =
                 record["id"],
-
             let expenseID = UUID(
                 uuidString: idString
             ),
-
             case let .string(userIDString) =
                 record["user_id"],
-
             let userID = UUID(
                 uuidString: userIDString
             )
-
         else {
 
             AppLogger.shared.error(
@@ -755,6 +566,7 @@ extension SyncService {
             Expense.fetchRequest()
 
         request.fetchLimit = 1
+
         request.predicate = NSPredicate(
             format:
                 "id == %@ AND userID == %@",
@@ -763,6 +575,7 @@ extension SyncService {
         )
 
         do {
+
             var expense =
                 try context.fetch(request).first
 
@@ -772,6 +585,7 @@ extension SyncService {
             //
             // In that case, use transaction_id to find
             // the local expense.
+
             if expense == nil,
                case let .string(transactionID) =
                     record["transaction_id"],
@@ -782,6 +596,7 @@ extension SyncService {
                     Expense.fetchRequest()
 
                 transactionRequest.fetchLimit = 1
+
                 transactionRequest.predicate =
                     NSPredicate(
                         format:
@@ -797,10 +612,12 @@ extension SyncService {
             }
 
             guard let expense else {
+
                 AppLogger.shared.info(
                     "Realtime expense UPDATE: local expense not found",
                     category: .realtime
                 )
+
                 return
             }
 
@@ -915,18 +732,14 @@ extension SyncService {
         guard
             case let .string(idString) =
                 record["id"],
-
             let expenseID = UUID(
                 uuidString: idString
             ),
-
             case let .string(userIDString) =
                 record["user_id"],
-
             let userID = UUID(
                 uuidString: userIDString
             )
-
         else {
 
             AppLogger.shared.error(

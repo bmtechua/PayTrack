@@ -138,3 +138,47 @@
 "send_report" = "Надіслати звіт";
 "report_sent" = "Звіт успішно надіслано";
 "report_error" = "Не вдалося надіслати звіт";
+
+"engineering" = "Інженерія";
+
+"engineering_full_sync" = "Повна синхронізація";
+"engineering_sync_plaid" = "Синхронізувати Plaid";
+"engineering_bank_connection" = "Підключення банку";
+"engineering_remove_duplicates" = "Видалити дублікати Plaid";
+"engineering_delete_local" = "Видалити локальні Plaid-витрати";
+"engineering_delete_remote" = "Видалити віддалені Plaid-витрати";
+"engineering_sync_statistics" = "Статистика синхронізації";
+"engineering_plaid_connections" = "Підключення Plaid";
+"engineering_realtime_test" = "Тест Realtime";
+"engineering_logs" = "Журнали";
+"engineering_reset_sync" = "Скинути стан синхронізації";
+
+"engineering_run_full_sync" = "Запустити повну синхронізацію?";
+"engineering_sync_plaid_question" = "Синхронізувати Plaid?";
+"engineering_connect_bank" = "Підключити банківський рахунок?";
+"engineering_remove_duplicates_question" = "Видалити дублікати Plaid-витрат?";
+"engineering_delete_local_question" = "Видалити локальні Plaid-витрати?";
+"engineering_delete_remote_question" = "Видалити всі віддалені Plaid-витрати?";
+"engineering_reset_sync_question" = "Скинути стан синхронізації?";
+
+"engineering_full_sync_message" = "Буде синхронізовано категорії, витрати, налаштування профілю та дані Plaid.";
+"engineering_sync_plaid_message" = "Буде синхронізовано витрати з активного підключення Plaid.";
+"engineering_connect_bank_message" = "Відкриється Plaid для підключення банківського рахунку.";
+"engineering_remove_duplicates_message" = "Дублікати Plaid-витрат у Supabase буде видалено.";
+"engineering_delete_local_message" = "Усі локальні Plaid-витрати буде остаточно видалено з цього пристрою.";
+"engineering_delete_remote_message" = "Усі Plaid-витрати буде остаточно видалено з Supabase. Локальні витрати на цьому пристрої залишаться.";
+"engineering_reset_sync_message" = "Поточну операцію повної синхронізації буде скасовано. Локальні та віддалені дані не буде видалено.";
+
+"run" = "Запустити";
+"sync" = "Синхронізувати";
+"continue" = "Продовжити";
+"remove" = "Видалити";
+"delete" = "Видалити";
+"reset" = "Скинути";
+
+"bank_connection" = "Підключення банку";
+"bank_connection_plaid" = "Підключити через Plaid";
+"bank_connection_connected" = "Підключені банки";
+"bank_connection_none" = "Немає підключених банків";
+"bank_connection_duplicate" = "Цей банківський рахунок уже підключений.";
+

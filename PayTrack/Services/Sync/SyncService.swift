@@ -89,4 +89,27 @@ final class SyncService {
             )
         }
     }
+    
+    // MARK: - syncPlaidConnection
+    
+    func syncPlaidConnection(_ connectionID: String) async {
+        do {
+            let expenses = try await PlaidExpenseService.shared.fetchExpenses(
+                connectionID: connectionID
+            )
+
+            AppLogger.shared.info(
+                "Plaid expenses received after Link: \(expenses.count)",
+                category: .sync
+            )
+
+            await importPlaidExpenses(expenses)
+
+        } catch {
+            AppLogger.shared.error(
+                "Plaid connection sync failed: \(error.localizedDescription)",
+                category: .sync
+            )
+        }
+    }
 }

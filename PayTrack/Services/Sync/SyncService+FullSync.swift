@@ -732,22 +732,23 @@ extension SyncService {
         for userID: UUID
     ) async throws {
 
-        let request:
-            NSFetchRequest<Expense> =
+        let request: NSFetchRequest<Expense> =
             Expense.fetchRequest()
 
-        request.predicate =
-            NSPredicate(
-                format:
-                    "userID == %@",
-                userID as CVarArg
-            )
+        request.predicate = NSPredicate(
+            format: """
+            userID == %@ AND
+            source != %@ AND
+            source != nil
+            """,
+            userID as CVarArg,
+            "plaid"
+        )
 
         let expenses =
             try context.fetch(request)
 
         for expense in expenses {
-
             await syncOneExpense(
                 expense
             )
@@ -796,36 +797,35 @@ extension SyncService {
     private func removeDuplicatePlaidExpenses(
         for userID: UUID
     ) throws {
-
-        let request:
-            NSFetchRequest<Expense> =
+        let request: NSFetchRequest<Expense> =
             Expense.fetchRequest()
 
-        request.predicate =
-            NSPredicate(
-                format: """
-                userID == %@ AND
-                transactionID != nil AND
-                transactionID != ""
-                """,
-                userID as CVarArg
-            )
+        request.predicate = NSPredicate(
+            format: """
+            userID == %@ AND
+            source == %@ AND
+            transactionID != nil AND
+            transactionID != ""
+            """,
+            userID as CVarArg,
+            "plaid"
+        )
 
-        let expenses =
-            try context.fetch(request)
-
-        let grouped =
-            Dictionary(
-                grouping: expenses
-            ) { expense in
-
-                expense.transactionID ?? ""
-            }
+        let expenses = try context.fetch(request)
 
         var removedCount = 0
 
+        // MARK: 1. Exact transaction ID duplicates only
+
+        let groupedByTransactionID =
+            Dictionary(
+                grouping: expenses
+            ) { expense in
+                expense.transactionID ?? ""
+            }
+
         for (transactionID, duplicates)
-            in grouped {
+            in groupedByTransactionID {
 
             guard
                 !transactionID.isEmpty,
@@ -835,42 +835,25 @@ extension SyncService {
             }
 
             let primary =
-                duplicates.sorted {
-
-                    first, second in
-
-                    let firstIsPlaid =
-                        first.source == "plaid"
-
-                    let secondIsPlaid =
-                        second.source == "plaid"
-
-                    if firstIsPlaid !=
-                        secondIsPlaid {
-
-                        return firstIsPlaid
+                duplicates
+                    .sorted { first, second in
+                        (
+                            first.id?.uuidString ?? ""
+                        ) < (
+                            second.id?.uuidString ?? ""
+                        )
                     }
-
-                    return (
-                        first.id?.uuidString ?? ""
-                    ) < (
-                        second.id?.uuidString ?? ""
-                    )
-                }
-                .first!
+                    .first!
 
             for duplicate
                 in duplicates
                 where duplicate !== primary {
 
-                context.delete(
-                    duplicate
-                )
-
+                context.delete(duplicate)
                 removedCount += 1
 
                 AppLogger.shared.info(
-                    "Duplicate Plaid expense removed: \(duplicate.title ?? "Unknown")",
+                    "Duplicate Plaid expense removed by transactionID: \(duplicate.title ?? "Unknown")",
                     category: .coreData
                 )
             }
@@ -881,11 +864,11 @@ extension SyncService {
         }
 
         AppLogger.shared.info(
-            "Duplicate Plaid expense cleanup completed. Removed: \(removedCount)",
+            "Duplicate Plaid transactionID cleanup completed. Removed: \(removedCount)",
             category: .coreData
         )
     }
-
+    
     // MARK: - Remove remote Plaid Sandbox duplicates
 
     private func removeRemotePlaidSandboxDuplicates(
@@ -1167,77 +1150,368 @@ extension SyncService {
         }
     }
 
+
+
     // MARK: - Sync Plaid expenses
 
     private func syncPlaidExpenses() async {
 
         do {
 
-            let user =
-                try await client.auth.session.user
+            let user = try await client.auth.session.user
 
-            let response =
-                try await client
-                    .from("bank_connections")
-                    .select("id")
-                    .eq(
-                        "user_id",
-                        value:
-                            user.id.uuidString
-                    )
-                    .eq(
-                        "status",
-                        value: "active"
-                    )
-                    .limit(1)
-                    .execute()
+            let response = try await client
+                .from("bank_connections")
+                .select("id, institution_id, created_at")
+                .eq(
+                    "user_id",
+                    value: user.id.uuidString
+                )
+                .eq(
+                    "status",
+                    value: "active"
+                )
+                .execute()
 
             struct BankConnection: Decodable {
 
                 let id: UUID
+                let institutionID: String?
+                let createdAt: Date
+
+                enum CodingKeys: String, CodingKey {
+                    case id
+                    case institutionID = "institution_id"
+                    case createdAt = "created_at"
+                }
             }
 
-            let connections =
-                try JSONDecoder().decode(
-                    [BankConnection].self,
-                    from: response.data
-                )
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
 
-            guard
-                let connection =
-                    connections.first
-            else {
+            let connections = try decoder.decode(
+                [BankConnection].self,
+                from: response.data
+            )
+
+            guard !connections.isEmpty else {
 
                 AppLogger.shared.info(
-                    "No active Plaid bank connection",
+                    "No active Plaid bank connections",
                     category: .sync
                 )
 
                 return
             }
 
-            let expenses =
-                try await PlaidExpenseService.shared.fetchExpenses(
-                    connectionID:
-                        connection.id.uuidString
-                            .lowercased()
-                )
-
             AppLogger.shared.info(
-                "Plaid expenses received: \(expenses.count)",
+                "Active Plaid connections found: \(connections.count)",
                 category: .sync
             )
 
-            await importPlaidExpenses(
-                expenses
+            var syncedConnections = 0
+            var totalExpenses = 0
+
+            for connection in connections {
+
+                // Old connection without institution_id is preserved
+                // and is not used for Plaid synchronization.
+                guard let institutionID = connection.institutionID,
+                      !institutionID.isEmpty
+                else {
+
+                    AppLogger.shared.info(
+                        "Skipping active Plaid connection without institution_id: \(connection.id)",
+                        category: .sync
+                    )
+
+                    continue
+                }
+
+                AppLogger.shared.info(
+                    "Plaid connection to sync: \(connection.id), institution: \(institutionID)",
+                    category: .sync
+                )
+
+                do {
+
+                    let expenses =
+                        try await PlaidExpenseService.shared.fetchExpenses(
+                            connectionID:
+                                connection.id.uuidString.lowercased()
+                        )
+
+                    AppLogger.shared.info(
+                        "Plaid expenses received: \(expenses.count) from connection \(connection.id)",
+                        category: .sync
+                    )
+
+                    await importPlaidExpenses(expenses)
+
+                    syncedConnections += 1
+                    totalExpenses += expenses.count
+
+                } catch {
+
+                    AppLogger.shared.error(
+                        "Plaid sync failed for connection \(connection.id): \(error.localizedDescription)",
+                        category: .sync
+                    )
+                }
+            }
+
+            AppLogger.shared.info(
+                "Plaid sync completed. Connections synced: \(syncedConnections), expenses received: \(totalExpenses)",
+                category: .sync
             )
 
         } catch {
 
             AppLogger.shared.error(
-                "Plaid sync failed: \(error.localizedDescription)",
+                "Plaid connections loading failed: \(error.localizedDescription)",
                 category: .sync
             )
+        }
+    }
+    
+    // MARK: - Manual Plaid sync
+
+    func syncPlaid() async {
+        await syncPlaidExpenses()
+    }
+    
+    // MARK: - Delete remote Plaid expenses
+
+    func deleteRemotePlaidExpenses() async {
+        do {
+            let userID = try await currentUserID()
+
+            try await client
+                .from("expenses")
+                .delete()
+                .eq(
+                    "user_id",
+                    value: userID.uuidString
+                )
+                .eq(
+                    "source",
+                    value: "plaid"
+                )
+                .execute()
+
+            AppLogger.shared.info(
+                "All remote Plaid expenses deleted",
+                category: .sync
+            )
+
+        } catch {
+            AppLogger.shared.error(
+                "Failed to delete remote Plaid expenses: \(error.localizedDescription)",
+                category: .sync
+            )
+        }
+    }
+
+    // MARK: - Sync statistics
+
+    func syncStatisticsText() async -> String {
+        do {
+            let userID = try await currentUserID()
+
+            // Local Plaid expenses
+            let localRequest: NSFetchRequest<Expense> =
+                Expense.fetchRequest()
+
+            localRequest.predicate = NSPredicate(
+                format: "source == %@ AND userID == %@",
+                "plaid",
+                userID as CVarArg
+            )
+
+            let localCount = try context.count(
+                for: localRequest
+            )
+
+            // Remote Plaid expenses
+            let remoteResponse = try await client
+                .from("expenses")
+                .select("id", head: true, count: .exact)
+                .eq(
+                    "user_id",
+                    value: userID.uuidString
+                )
+                .eq(
+                    "source",
+                    value: "plaid"
+                )
+                .execute()
+
+            let remoteCount = remoteResponse.count ?? 0
+
+            let result = """
+            📊 Sync statistics
+
+            Local Plaid expenses: \(localCount)
+            Remote Plaid expenses: \(remoteCount)
+            """
+
+            AppLogger.shared.info(
+                "Sync statistics — local Plaid: \(localCount), remote Plaid: \(remoteCount)",
+                category: .sync
+            )
+
+            print(result)
+
+            return result
+
+        } catch {
+            let errorText =
+                "Failed to get sync statistics: \(error.localizedDescription)"
+
+            AppLogger.shared.error(
+                errorText,
+                category: .sync
+            )
+
+            return errorText
+        }
+    }
+
+    // MARK: - Plaid connections
+
+    func plaidConnectionsText() async -> String {
+        do {
+            let userID = try await currentUserID()
+
+            struct PlaidConnection: Decodable {
+                let id: UUID
+                let institutionName: String?
+                let status: String?
+                let createdAt: Date
+
+                enum CodingKeys: String, CodingKey {
+                    case id
+                    case institutionName = "institution_name"
+                    case status
+                    case createdAt = "created_at"
+                }
+            }
+
+            let response = try await client
+                .from("bank_connections")
+                .select(
+                    "id, institution_name, status, created_at"
+                )
+                .eq(
+                    "user_id",
+                    value: userID.uuidString
+                )
+                .order(
+                    "created_at",
+                    ascending: false
+                )
+                .execute()
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+
+            let connections = try decoder.decode(
+                [PlaidConnection].self,
+                from: response.data
+            )
+
+            guard !connections.isEmpty else {
+                return "No Plaid connections found."
+            }
+
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd HH:mm"
+            formatter.timeZone = TimeZone.current
+
+            var result = "🔗 Plaid connections\n\n"
+
+            for (index, connection) in connections.enumerated() {
+                result += """
+                \(index + 1). \(connection.institutionName ?? "Unknown")
+                Status: \(connection.status ?? "Unknown")
+                ID: \(connection.id.uuidString)
+                Created: \(formatter.string(from: connection.createdAt))
+
+                """
+            }
+
+            AppLogger.shared.info(
+                "Plaid connections loaded: \(connections.count)",
+                category: .sync
+            )
+
+            return result
+
+        } catch {
+            let errorText =
+                "Failed to load Plaid connections: \(error.localizedDescription)"
+
+            AppLogger.shared.error(
+                errorText,
+                category: .sync
+            )
+
+            return errorText
+        }
+    }
+    
+    // MARK: - Realtime test
+
+    func testRealtime() async -> String {
+        do {
+            let userID = try await currentUserID()
+
+            let channelName =
+                "engineering-realtime-test-\(userID.uuidString)"
+
+            let channel =
+                client.realtimeV2.channel(channelName)
+
+            try await channel.subscribeWithError()
+
+            print("📡 Realtime test: subscribed")
+
+            AppLogger.shared.info(
+                "Realtime test: subscribed",
+                category: .sync
+            )
+
+            try await Task.sleep(for: .seconds(2))
+
+            await channel.unsubscribe()
+
+            print("📡 Realtime test: completed")
+
+            AppLogger.shared.info(
+                "Realtime test: completed",
+                category: .sync
+            )
+
+            return """
+            📡 Realtime test
+
+            ✅ Connected successfully
+            ✅ Channel subscribed
+            ✅ Channel unsubscribed
+            """
+
+        } catch {
+            let errorText =
+                "❌ Realtime test failed\n\n\(error.localizedDescription)"
+
+            print(errorText)
+
+            AppLogger.shared.error(
+                errorText,
+                category: .sync
+            )
+
+            return errorText
         }
     }
 
@@ -1424,15 +1698,6 @@ extension SyncService {
 
             try Task.checkCancellation()
 
-            // -------------------------------------------------
-            // 12. Remove remote Plaid Sandbox duplicates.
-            // -------------------------------------------------
-
-            await removeRemotePlaidSandboxDuplicates(
-                for: userID
-            )
-
-            try Task.checkCancellation()
 
             AppLogger.shared.info(
                 "Full sync completed: \(categoriesByID.count) categories, \(remoteExpenses.count) remote expenses",

@@ -39,6 +39,7 @@ final class AppLogger {
         case sync = "SYNC"
         case realtime = "REALTIME"
         case coreData = "CORE DATA"
+        case engineering = "ENGINEERING"
     }
 
     // MARK: - Init
@@ -284,7 +285,7 @@ final class AppLogger {
 
         return result.joined(separator: "\n")
     }
-
+    
 
     // MARK: - Clear Log
 

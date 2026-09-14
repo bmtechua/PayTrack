@@ -137,3 +137,48 @@
 "send_report" = "Envoyer le rapport";
 "report_sent" = "Rapport envoyé avec succès";
 "report_error" = "Échec de l’envoi du rapport";
+
+"engineering" = "Ingénierie";
+
+"engineering_full_sync" = "Synchronisation complète";
+"engineering_sync_plaid" = "Synchroniser Plaid";
+"engineering_bank_connection" = "Connexion bancaire";
+"engineering_remove_duplicates" = "Supprimer les doublons Plaid";
+"engineering_delete_local" = "Supprimer les dépenses Plaid locales";
+"engineering_delete_remote" = "Supprimer les dépenses Plaid distantes";
+"engineering_sync_statistics" = "Statistiques de synchronisation";
+"engineering_plaid_connections" = "Connexions Plaid";
+"engineering_realtime_test" = "Test Realtime";
+"engineering_logs" = "Journaux";
+"engineering_reset_sync" = "Réinitialiser l’état de synchronisation";
+
+"engineering_run_full_sync" = "Lancer la synchronisation complète ?";
+"engineering_sync_plaid_question" = "Synchroniser Plaid ?";
+"engineering_connect_bank" = "Connecter un compte bancaire ?";
+"engineering_remove_duplicates_question" = "Supprimer les doublons des dépenses Plaid ?";
+"engineering_delete_local_question" = "Supprimer les dépenses Plaid locales ?";
+"engineering_delete_remote_question" = "Supprimer toutes les dépenses Plaid distantes ?";
+"engineering_reset_sync_question" = "Réinitialiser l’état de synchronisation ?";
+
+"engineering_full_sync_message" = "Les catégories, les dépenses, les réglages du profil et les données Plaid seront synchronisés.";
+"engineering_sync_plaid_message" = "Les dépenses de la connexion Plaid active seront synchronisées.";
+"engineering_connect_bank_message" = "Plaid s’ouvrira pour connecter un compte bancaire.";
+"engineering_remove_duplicates_message" = "Les doublons des dépenses Plaid dans Supabase seront supprimés.";
+"engineering_delete_local_message" = "Toutes les dépenses Plaid locales seront définitivement supprimées de cet appareil.";
+"engineering_delete_remote_message" = "Toutes les dépenses Plaid seront définitivement supprimées de Supabase. Les dépenses locales sur cet appareil resteront.";
+"engineering_reset_sync_message" = "L’opération de synchronisation complète en cours sera annulée. Aucune donnée locale ou distante ne sera supprimée.";
+
+"run" = "Lancer";
+"sync" = "Synchroniser";
+"continue" = "Continuer";
+"remove" = "Supprimer";
+"delete" = "Supprimer";
+"reset" = "Réinitialiser";
+
+"bank_connection" = "Connexion bancaire";
+"bank_connection_plaid" = "Se connecter avec Plaid";
+"bank_connection_connected" = "Banques connectées";
+"bank_connection_none" = "Aucune banque connectée";
+"bank_connection_duplicate" = "Ce compte bancaire est déjà connecté.";
+
+
