@@ -73,7 +73,9 @@ extension SyncService {
             .execute()
 
         if let index = bankAccounts.firstIndex(where: { $0.id == id }) {
-            bankAccounts[index].isEnabled = isEnabled
+            var updatedBankAccounts = bankAccounts
+                updatedBankAccounts[index].isEnabled = isEnabled
+                bankAccounts = updatedBankAccounts
         }
 
         AppLogger.shared.info(

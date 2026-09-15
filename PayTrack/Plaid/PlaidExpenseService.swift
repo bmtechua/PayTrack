@@ -8,6 +8,7 @@ import Foundation
 
 struct PlaidExpense: Codable {
     let transactionID: String?
+    let accountID: String?
     let amount: Double
     let date: String?
     let title: String?
@@ -19,6 +20,7 @@ struct PlaidExpense: Codable {
 
     enum CodingKeys: String, CodingKey {
         case transactionID = "transaction_id"
+        case accountID = "account_id"
         case amount
         case date
         case title

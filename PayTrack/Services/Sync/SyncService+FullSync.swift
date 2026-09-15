@@ -296,6 +296,13 @@ extension SyncService {
             expense.transactionID =
                 transactionID
         }
+        
+        if case let .string(value) =
+            remoteExpense["plaid_account_id"] {
+            expense.plaidAccountID = value
+        } else {
+            expense.plaidAccountID = nil
+        }
 
         if case let .string(categoryIDString) =
             remoteExpense["category_id"],

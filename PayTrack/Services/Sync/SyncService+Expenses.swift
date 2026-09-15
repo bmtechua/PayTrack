@@ -99,8 +99,18 @@ extension SyncService {
 
                 "transaction_id": expense.transactionID.map {
                     .string($0)
+                } ?? .null,
+                
+                "plaid_account_id": expense.plaidAccountID.map {
+                    .string($0)
                 } ?? .null
+                
             ]
+            
+            AppLogger.shared.info(
+                "[SUPABASE] \(expense.title ?? "No title") → plaid_account_id: \(expense.plaidAccountID ?? "nil")",
+                category: .sync
+            )
 
             try await client
                 .from("expenses")
@@ -196,6 +206,13 @@ extension SyncService {
 
                 expense.userID = user.id
                 expense.transactionID = transactionID
+                expense.plaidAccountID = plaidExpense.accountID
+                
+                AppLogger.shared.info(
+                    "[PLAID] \(plaidExpense.title ?? "No title") → accountID: \(plaidExpense.accountID ?? "nil")",
+                    category: .sync
+                )
+                
                 expense.amount = plaidExpense.amount
                 expense.title = plaidExpense.title
                 expense.merchantName = plaidExpense.merchantName
@@ -484,6 +501,11 @@ extension SyncService {
 
                 expense.transactionID = value
             }
+            
+            if case let .string(value) =
+                record["plaid_account_id"] {
+                expense.plaidAccountID = value
+            }
 
             if case let .string(categoryIDString) =
                 record["category_id"],
@@ -676,6 +698,11 @@ extension SyncService {
 
                 expense.transactionID = value
             }
+            
+            if case let .string(value) =
+                record["plaid_account_id"] {
+                expense.plaidAccountID = value
+            }
 
             if case let .string(categoryIDString) =
                 record["category_id"],
@@ -728,60 +755,55 @@ extension SyncService {
     func applyRealtimeExpenseDelete(
         _ record: [String: AnyJSON]
     ) {
-
         guard
-            case let .string(idString) =
-                record["id"],
+            case let .string(idString) = record["id"],
             let expenseID = UUID(
                 uuidString: idString
-            ),
-            case let .string(userIDString) =
-                record["user_id"],
-            let userID = UUID(
-                uuidString: userIDString
             )
         else {
-
             AppLogger.shared.error(
-                "Realtime expense DELETE: invalid ID or user_id",
+                "Realtime expense DELETE: invalid ID",
                 category: .realtime
             )
-
             return
         }
 
-        guard UserDefaults.standard.string(
-            forKey: "activeUserID"
-        ) == userID.uuidString else {
-
+        guard
+            let activeUserIDString = UserDefaults.standard.string(
+                forKey: "activeUserID"
+            ),
+            let activeUserID = UUID(
+                uuidString: activeUserIDString
+            )
+        else {
+            AppLogger.shared.error(
+                "Realtime expense DELETE: active user not found",
+                category: .realtime
+            )
             return
         }
 
-        let request:
-            NSFetchRequest<Expense> =
+        let request: NSFetchRequest<Expense> =
             Expense.fetchRequest()
 
         request.fetchLimit = 1
-
         request.predicate = NSPredicate(
             format:
                 "id == %@ AND userID == %@",
             expenseID as CVarArg,
-            userID as CVarArg
+            activeUserID as CVarArg
         )
 
         do {
-
-            guard let expense =
-                    try context.fetch(
-                        request
-                    ).first else {
-
+            guard
+                let expense = try context.fetch(
+                    request
+                ).first
+            else {
                 AppLogger.shared.info(
                     "Realtime expense DELETE: local expense not found",
                     category: .realtime
                 )
-
                 return
             }
 
@@ -800,7 +822,6 @@ extension SyncService {
             )
 
         } catch {
-
             AppLogger.shared.error(
                 "Realtime expense DELETE failed: \(error.localizedDescription)",
                 category: .realtime

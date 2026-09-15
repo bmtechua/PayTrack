@@ -15,6 +15,9 @@ struct ExpensesListView: View {
     @ObservedObject
     private var authService = AuthService.shared
 
+    @ObservedObject
+    private var syncService = SyncService.shared
+
     @FetchRequest(
         sortDescriptors: [
             NSSortDescriptor(
@@ -33,21 +36,58 @@ struct ExpensesListView: View {
 
     private var visibleExpenses: [Expense] {
 
+        AppLogger.shared.info(
+            "[EXPENSES] visibleExpenses recalculated. Bank accounts: \(syncService.bankAccounts.count)",
+            category: .sync
+        )
+
         guard let userID = authService.user?.id else {
-
-            // Free mode:
-            // show only expenses without Premium owner
-
             return expenses.filter {
                 $0.userID == nil
             }
         }
 
-        // Premium mode:
-        // show only expenses belonging to current user
+        let enabledPlaidAccountIDs = Set(
+            syncService.bankAccounts
+                .filter { $0.isEnabled }
+                .map { $0.plaidAccountID }
+        )
 
-        return expenses.filter {
-            $0.userID == userID
+        let plaidExpenses = expenses.filter {
+            $0.userID == userID && $0.source == "plaid"
+        }
+
+        let hiddenExpenses = plaidExpenses.filter { expense in
+
+            guard let accountID = expense.plaidAccountID else {
+                return false
+            }
+
+            return !enabledPlaidAccountIDs.contains(accountID)
+        }
+
+        AppLogger.shared.info(
+            "[EXPENSES] Enabled Plaid accounts: \(enabledPlaidAccountIDs.count), " +
+            "Plaid expenses: \(plaidExpenses.count), " +
+            "Hidden disabled-account expenses: \(hiddenExpenses.count)",
+            category: .sync
+        )
+
+        return expenses.filter { expense in
+
+            guard expense.userID == userID else {
+                return false
+            }
+
+            guard expense.source == "plaid" else {
+                return true
+            }
+
+            guard let accountID = expense.plaidAccountID else {
+                return true
+            }
+
+            return enabledPlaidAccountIDs.contains(accountID)
         }
     }
 
@@ -62,7 +102,6 @@ struct ExpensesListView: View {
             Dictionary(
                 grouping: visibleExpenses
             ) { expense in
-
                 calendar.startOfDay(
                     for: expense.date ?? Date()
                 )
@@ -113,6 +152,11 @@ struct ExpensesListView: View {
 
     var body: some View {
 
+        let _ = AppLogger.shared.info(
+            "[EXPENSES] BODY rendered. Bank accounts: \(syncService.bankAccounts.count)",
+            category: .sync
+        )
+
         NavigationStack {
 
             List {
@@ -135,7 +179,8 @@ struct ExpensesListView: View {
                             } label: {
 
                                 ExpenseRowView(
-                                    expense: expense
+                                    expense: expense,
+                                    bankAccounts: syncService.bankAccounts
                                 )
                             }
                             .buttonStyle(.plain)
@@ -154,6 +199,7 @@ struct ExpensesListView: View {
                     }
                 }
             }
+
             .navigationTitle("all_expenses")
 
             .sheet(
@@ -259,6 +305,23 @@ private struct ExpenseRowView: View {
     @ObservedObject
     var expense: Expense
 
+    let bankAccounts: [BankAccount]
+
+    // MARK: - Bank Account
+
+    private var bankAccount: BankAccount? {
+
+        guard let plaidAccountID = expense.plaidAccountID else {
+            return nil
+        }
+
+        return bankAccounts.first {
+            $0.plaidAccountID == plaidAccountID
+        }
+    }
+
+    // MARK: - Body
+
     var body: some View {
 
         HStack {
@@ -296,6 +359,20 @@ private struct ExpenseRowView: View {
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+                // Bank account for Plaid expenses
+
+                if let bankAccount {
+
+                    Text(
+                        "\(bankAccount.name ?? "Bank account")" +
+                        (bankAccount.mask.map {
+                            " ••••\($0)"
+                        } ?? "")
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
