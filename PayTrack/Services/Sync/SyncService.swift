@@ -8,9 +8,10 @@
 import Foundation
 import CoreData
 import Supabase
+import Combine
 
 @MainActor
-final class SyncService {
+final class SyncService: ObservableObject {
 
     static let shared = SyncService()
 
@@ -26,6 +27,8 @@ final class SyncService {
     var profileChannel: RealtimeChannelV2?
 
     var fullSyncTask: Task<Void, Never>?
+    
+    @Published var bankAccounts: [BankAccount] = []
 
     // MARK: - Cancel full sync
 
@@ -34,6 +37,7 @@ final class SyncService {
         fullSyncTask?.cancel()
 
         fullSyncTask = nil
+        
 
         AppLogger.shared.info(
             "Full sync cancelled",

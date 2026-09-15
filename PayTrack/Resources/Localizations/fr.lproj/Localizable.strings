@@ -90,7 +90,12 @@
 "currency_eur" = "€ Euro";
 "currency_usd" = "$ Dollar américain";
 "currency_cad" = "CA$ Canadian Dollar";
-"currency_aud" = "AUD Dollar australien";
+"currency_gbp" = "Livre sterling";
+"currency_aud" = "Dollar australien";
+"currency_nzd" = "Dollar néo-zélandais";
+"currency_chf" = "Franc suisse";
+"currency_jpy" = "Yen japonais";
+"currency_pln" = "Zloty polonais";
 
 "app_log" = "Journal de l’application";
 "log_title" = "Journal de l’application";
@@ -180,5 +185,18 @@
 "bank_connection_connected" = "Banques connectées";
 "bank_connection_none" = "Aucune banque connectée";
 "bank_connection_duplicate" = "Ce compte bancaire est déjà connecté.";
+"bank_account_checking" = "Compte courant";
+"bank_account_savings" = "Compte d’épargne";
+"bank_account_money_market" = "Compte du marché monétaire";
+"bank_account_cd" = "Certificat de dépôt";
+"bank_account_credit_card" = "Carte de crédit";
+"bank_account_student_loan" = "Prêt étudiant";
+"bank_account_mortgage" = "Hypothèque";
+"bank_account_auto_loan" = "Prêt automobile";
+"bank_account_home_equity" = "Marge de crédit hypothécaire";
+"bank_account_hsa" = "Compte d’épargne santé";
+"bank_account_cash_management" = "Compte de gestion de trésorerie";
+"bank_account_tfsa" = "CELI";
+"bank_account_rrsp" = "REER";
 
 

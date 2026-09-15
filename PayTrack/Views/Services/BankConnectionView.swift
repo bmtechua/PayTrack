@@ -13,7 +13,7 @@ struct BankConnectionView: View {
 
 // MARK: - Bank connection model
 
-private struct BankConnection: Decodable, Identifiable {
+    struct BankConnection: Decodable, Identifiable {
 
     let id: UUID
     let institutionName: String?
@@ -76,43 +76,57 @@ var body: some View {
 
                 ForEach(connections) { connection in
 
-                    VStack(
-                        alignment: .leading,
-                        spacing: 6
-                    ) {
-
-                        Text(
-                            connection.institutionDisplayName
-                        )
-                        .font(.headline)
-
-                        HStack {
-
+                    NavigationLink {
+                        BankAccountsView(connection: connection)
+                    } label: {
+                        VStack(
+                            alignment: .leading,
+                            spacing: 6
+                        ) {
                             Text(
-                                connection.status.capitalized
+                                connection.institutionDisplayName
                             )
-                            .font(.caption)
-                            .foregroundStyle(
-                                connection.status.lowercased()
-                                    == "active"
-                                ? .green
-                                : .secondary
-                            )
+                            .font(.headline)
 
-                            Spacer()
+                            HStack {
+                                Text(
+                                    connection.status.capitalized
+                                )
+                                .font(.caption)
+                                .foregroundStyle(
+                                    connection.status.lowercased() == "active"
+                                    ? .green
+                                    : .secondary
+                                )
 
-                            Text(
-                                connection.createdAt,
-                                format: .dateTime
-                                    .year()
-                                    .month(.twoDigits)
-                                    .day(.twoDigits)
-                            )
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                                Spacer()
+
+                                let accountCount =
+                                    SyncService.shared.bankAccounts.filter {
+                                        $0.connectionID == connection.id
+                                    }.count
+
+                                if accountCount > 0 {
+                                    Text(
+                                        "\(accountCount) рахунків"
+                                    )
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                }
+
+                                Text(
+                                    connection.createdAt,
+                                    format: .dateTime
+                                        .year()
+                                        .month(.twoDigits)
+                                        .day(.twoDigits)
+                                )
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            }
                         }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
                 }
             }
         }

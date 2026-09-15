@@ -91,7 +91,12 @@
 "currency_eur" = "€ Євро";
 "currency_usd" = "$ Долар";
 "currency_cad" = "CA$ Канадський долар";
-"currency_aud" = "AUD Австралійський долар";
+"currency_gbp" = "Британський фунт";
+"currency_aud" = "Австралійський долар";
+"currency_nzd" = "Новозеландський долар";
+"currency_chf" = "Швейцарський франк";
+"currency_jpy" = "Японська єна";
+"currency_pln" = "Польський злотий";
 
 "app_log" = "Лог програми";
 "log_title" = "Лог програми";
@@ -181,4 +186,17 @@
 "bank_connection_connected" = "Підключені банки";
 "bank_connection_none" = "Немає підключених банків";
 "bank_connection_duplicate" = "Цей банківський рахунок уже підключений.";
+"bank_account_checking" = "Поточний рахунок";
+"bank_account_savings" = "Ощадний рахунок";
+"bank_account_money_market" = "Рахунок грошового ринку";
+"bank_account_cd" = "Депозитний сертифікат";
+"bank_account_credit_card" = "Кредитна картка";
+"bank_account_student_loan" = "Студентський кредит";
+"bank_account_mortgage" = "Іпотека";
+"bank_account_auto_loan" = "Автокредит";
+"bank_account_home_equity" = "Кредитна лінія під заставу житла";
+"bank_account_hsa" = "Медичний ощадний рахунок";
+"bank_account_cash_management" = "Рахунок управління готівкою";
+"bank_account_tfsa" = "TFSA";
+"bank_account_rrsp" = "RRSP";
 

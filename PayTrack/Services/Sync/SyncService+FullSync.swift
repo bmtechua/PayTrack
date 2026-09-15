@@ -11,7 +11,7 @@ extension SyncService {
 
     // MARK: - Current user
 
-    private func currentUserID() async throws -> UUID {
+    func currentUserID() async throws -> UUID {
         let user =
             try await client.auth.session.user
 
@@ -1697,6 +1697,13 @@ extension SyncService {
             await syncPlaidExpenses()
 
             try Task.checkCancellation()
+            
+            bankAccounts = try await downloadBankAccounts()
+
+            AppLogger.shared.info(
+                "Bank accounts loaded: \(bankAccounts.count)",
+                category: .sync
+            )
 
 
             AppLogger.shared.info(

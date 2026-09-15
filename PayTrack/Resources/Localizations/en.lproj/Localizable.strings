@@ -91,7 +91,12 @@
 "currency_eur" = "€ Euro";
 "currency_usd" = "$ US Dollar";
 "currency_cad" = "CA$ Canadian Dollar";
-"currency_aud" = "AUD Australian Dollar";
+"currency_gbp" = "British Pound";
+"currency_aud" = "Australian Dollar";
+"currency_nzd" = "New Zealand Dollar";
+"currency_chf" = "Swiss Franc";
+"currency_jpy" = "Japanese Yen";
+"currency_pln" = "Polish Zloty";
 
 "app_log" = "App log";
 "log_title" = "App Log";
@@ -181,5 +186,18 @@
 "bank_connection_connected" = "Connected banks";
 "bank_connection_none" = "No connected banks";
 "bank_connection_duplicate" = "This bank account is already connected.";
+"bank_account_checking" = "Checking";
+"bank_account_savings" = "Savings";
+"bank_account_money_market" = "Money Market";
+"bank_account_cd" = "Certificate of Deposit";
+"bank_account_credit_card" = "Credit Card";
+"bank_account_student_loan" = "Student Loan";
+"bank_account_mortgage" = "Mortgage";
+"bank_account_auto_loan" = "Auto Loan";
+"bank_account_home_equity" = "Home Equity Line of Credit";
+"bank_account_hsa" = "Health Savings Account";
+"bank_account_cash_management" = "Cash Management";
+"bank_account_tfsa" = "TFSA";
+"bank_account_rrsp" = "RRSP";
 
 
