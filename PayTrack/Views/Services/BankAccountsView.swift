@@ -61,7 +61,7 @@ struct BankAccountsView: View {
             return "bank_account_rrsp"
 
         default:
-            return LocalizedStringKey(subtype)
+            return "bank_account_other"
         }
     }
     
@@ -98,7 +98,7 @@ struct BankAccountsView: View {
                 return "currency_pln"
 
         default:
-            return LocalizedStringKey(currency)
+            return "currency_other"
         }
     }
 
@@ -158,7 +158,7 @@ struct BankAccountsView: View {
                             .foregroundStyle(.secondary)
                             
                             Toggle(
-                                "account_enabled",
+                                "",
                                 isOn: Binding(
                                     get: {
                                         account.isEnabled
@@ -180,6 +180,7 @@ struct BankAccountsView: View {
                                     }
                                 )
                             )
+                            .labelsHidden()
                             .font(.caption)
                         }
                         .padding(.vertical, 4)

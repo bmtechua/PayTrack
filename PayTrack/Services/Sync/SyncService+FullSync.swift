@@ -1217,14 +1217,15 @@ extension SyncService {
             )
 
             var syncedConnections = 0
-            var totalExpenses = 0
+            var totalAdded = 0
+            var totalModified = 0
+            var totalRemoved = 0
 
             for connection in connections {
 
-                // Old connection without institution_id is preserved
-                // and is not used for Plaid synchronization.
-                guard let institutionID = connection.institutionID,
-                      !institutionID.isEmpty
+                guard
+                    let institutionID = connection.institutionID,
+                    !institutionID.isEmpty
                 else {
 
                     AppLogger.shared.info(
@@ -1242,21 +1243,57 @@ extension SyncService {
 
                 do {
 
-                    let expenses =
-                        try await PlaidExpenseService.shared.fetchExpenses(
+                    let changes =
+                        try await PlaidExpenseService.shared.fetchChanges(
                             connectionID:
                                 connection.id.uuidString.lowercased()
                         )
 
                     AppLogger.shared.info(
-                        "Plaid expenses received: \(expenses.count) from connection \(connection.id)",
+                        """
+                        Plaid changes received:
+                        added=\(changes.added.count)
+                        modified=\(changes.modified.count)
+                        removed=\(changes.removed.count)
+                        connection=\(connection.id)
+                        """,
                         category: .sync
                     )
 
-                    await importPlaidExpenses(expenses)
+                    // MARK: Added
+
+                    if !changes.added.isEmpty {
+
+                        await importPlaidExpenses(
+                            changes.added
+                        )
+
+                        totalAdded += changes.added.count
+                    }
+
+                    // MARK: Modified
+
+                    if !changes.modified.isEmpty {
+
+                        await importPlaidExpenses(
+                            changes.modified
+                        )
+
+                        totalModified += changes.modified.count
+                    }
+
+                    // MARK: Removed
+
+                    if !changes.removed.isEmpty {
+
+                        await removePlaidExpenses(
+                            changes.removed
+                        )
+
+                        totalRemoved += changes.removed.count
+                    }
 
                     syncedConnections += 1
-                    totalExpenses += expenses.count
 
                 } catch {
 
@@ -1268,7 +1305,13 @@ extension SyncService {
             }
 
             AppLogger.shared.info(
-                "Plaid sync completed. Connections synced: \(syncedConnections), expenses received: \(totalExpenses)",
+                """
+                Plaid sync completed.
+                Connections synced: \(syncedConnections)
+                Added: \(totalAdded)
+                Modified: \(totalModified)
+                Removed: \(totalRemoved)
+                """,
                 category: .sync
             )
 

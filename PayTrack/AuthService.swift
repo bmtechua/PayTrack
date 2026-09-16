@@ -100,6 +100,7 @@ final class AuthService: ObservableObject {
                 await SyncService.shared.startCategoriesRealtime()
                 await SyncService.shared.startExpensesRealtime()
                 await SyncService.shared.startProfileRealtime()
+                await SyncService.shared.startBankAccountsRealtime()
                 
                 if !hasCompletedAuthSync {
 
@@ -156,6 +157,7 @@ final class AuthService: ObservableObject {
         await SyncService.shared.startCategoriesRealtime()
         await SyncService.shared.startExpensesRealtime()
         await SyncService.shared.startProfileRealtime()
+        await SyncService.shared.startBankAccountsRealtime()
         await PushDeviceService.shared.registerDevice()
 
         AppLogger.shared.info(
@@ -209,6 +211,7 @@ final class AuthService: ObservableObject {
         await SyncService.shared.startCategoriesRealtime()
         await SyncService.shared.startExpensesRealtime()
         await SyncService.shared.startProfileRealtime()
+        await SyncService.shared.startBankAccountsRealtime()
         await PushDeviceService.shared.registerDevice()
 
         AppLogger.shared.info(
@@ -257,6 +260,7 @@ final class AuthService: ObservableObject {
         await SyncService.shared.stopCategoriesRealtime()
         await SyncService.shared.stopExpensesRealtime()
         await SyncService.shared.stopProfileRealtime()
+        await SyncService.shared.startBankAccountsRealtime()
 
         // Remove only active Premium session state.
         // Premium local data remains on device.

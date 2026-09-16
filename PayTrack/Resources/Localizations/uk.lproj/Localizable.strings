@@ -199,4 +199,10 @@
 "bank_account_cash_management" = "Рахунок управління готівкою";
 "bank_account_tfsa" = "TFSA";
 "bank_account_rrsp" = "RRSP";
+"bank_accounts" = "Банківські рахунки";
+"bank_accounts_none" = "Немає банківських рахунків";
+"bank_account" = "Банківський рахунок";
+"account_enabled" = "Рахунок увімкнено";
+"bank_account_other" = "Інший рахунок";
+"currency_other" = "Інша валюта";
 

@@ -25,6 +25,8 @@ final class SyncService: ObservableObject {
     var expensesChannel: RealtimeChannelV2?
 
     var profileChannel: RealtimeChannelV2?
+    
+    var bankAccountsChannel: RealtimeChannelV2?
 
     var fullSyncTask: Task<Void, Never>?
     

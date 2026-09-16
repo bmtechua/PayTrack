@@ -305,6 +305,106 @@ extension SyncService {
             )
         }
     }
+    
+    // MARK: - Remove Plaid expenses
+
+    func removePlaidExpenses(
+        _ removedExpenses: [PlaidRemovedExpense]
+    ) async {
+
+        do {
+
+            let user = try await client.auth.session.user
+
+            for removedExpense in removedExpenses {
+
+                guard
+                    let transactionID = removedExpense.transactionID,
+                    !transactionID.isEmpty
+                else {
+
+                    AppLogger.shared.error(
+                        "Removed Plaid expense has no transaction ID",
+                        category: .sync
+                    )
+
+                    continue
+                }
+
+                // MARK: 1. Find local expense
+
+                let request: NSFetchRequest<Expense> =
+                    Expense.fetchRequest()
+
+                request.fetchLimit = 1
+
+                request.predicate = NSPredicate(
+                    format:
+                        "transactionID == %@ AND userID == %@",
+                    transactionID,
+                    user.id as CVarArg
+                )
+
+                let localExpense =
+                    try context.fetch(request).first
+
+                // MARK: 2. Delete local expense
+
+                if let localExpense {
+
+                    let title =
+                        localExpense.title ?? "No title"
+
+                    context.delete(localExpense)
+
+                    try context.save()
+
+                    AppLogger.shared.info(
+                        "Plaid expense removed locally: \(transactionID) — \(title)",
+                        category: .sync
+                    )
+
+                } else {
+
+                    AppLogger.shared.info(
+                        "Plaid removed transaction not found locally: \(transactionID)",
+                        category: .sync
+                    )
+                }
+
+                // MARK: 3. Delete remote Supabase expense
+
+                try await client
+                    .from("expenses")
+                    .delete()
+                    .eq(
+                        "user_id",
+                        value: user.id.uuidString
+                    )
+                    .eq(
+                        "source",
+                        value: "plaid"
+                    )
+                    .eq(
+                        "transaction_id",
+                        value: transactionID
+                    )
+                    .execute()
+
+                AppLogger.shared.info(
+                    "Plaid expense removed from Supabase: \(transactionID)",
+                    category: .sync
+                )
+            }
+
+        } catch {
+
+            AppLogger.shared.error(
+                "Failed to remove Plaid expenses: \(error.localizedDescription)",
+                category: .sync
+            )
+        }
+    }
 
     // MARK: - Delete expense
 

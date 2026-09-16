@@ -198,5 +198,11 @@
 "bank_account_cash_management" = "Compte de gestion de trésorerie";
 "bank_account_tfsa" = "CELI";
 "bank_account_rrsp" = "REER";
+"bank_accounts" = "Comptes bancaires";
+"bank_accounts_none" = "Aucun compte bancaire";
+"bank_account" = "Compte bancaire";
+"account_enabled" = "Compte activé";
+"bank_account_other" = "Autre compte";
+"currency_other" = "Autre devise";
 
 

@@ -23,6 +23,8 @@ struct HomeView: View {
 
     @ObservedObject
     private var authService = AuthService.shared
+    @ObservedObject
+    private var syncService = SyncService.shared
 
     @State
     private var monthOffset: Int = 0
@@ -190,32 +192,38 @@ struct HomeView: View {
     // MARK: - FILTER
 
     private func filteredExpenses() -> [Expense] {
-
         let calendar = Calendar.current
+
+        let enabledPlaidAccountIDs = Set(
+            syncService.bankAccounts
+                .filter { $0.isEnabled }
+                .map { $0.plaidAccountID }
+        )
 
         return expenses.filter { expense in
 
             // MARK: Owner filter
-
             if let userID = authService.user?.id {
-
-                // Premium:
-                // show only current user's expenses
                 guard expense.userID == userID else {
                     return false
                 }
-
             } else {
-
-                // Free:
-                // show only local Free expenses
                 guard expense.userID == nil else {
                     return false
                 }
             }
 
-            // MARK: Month filter
+            // MARK: Bank account filter
+            if expense.source == "plaid" {
+                guard
+                    let plaidAccountID = expense.plaidAccountID,
+                    enabledPlaidAccountIDs.contains(plaidAccountID)
+                else {
+                    return false
+                }
+            }
 
+            // MARK: Month filter
             guard let date = expense.date else {
                 return false
             }
@@ -227,7 +235,6 @@ struct HomeView: View {
             )
         }
     }
-
     // MARK: - TOTAL
 
     private func monthTotal() -> Double {

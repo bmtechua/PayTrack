@@ -314,6 +314,115 @@ extension SyncService {
             category: .realtime
         )
     }
+    
+    // MARK: - Realtime bank accounts
+
+    func startBankAccountsRealtime() async {
+
+        guard bankAccountsChannel == nil else {
+            return
+        }
+
+        do {
+            let user = try await client.auth.session.user
+
+            let channel = client.channel(
+                "bank-accounts-realtime-\(user.id.uuidString)"
+            )
+
+            let changes = channel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "bank_accounts"
+            )
+
+            bankAccountsChannel = channel
+
+            Task { @MainActor in
+
+                for await change in changes {
+
+                    switch change {
+
+                    case .insert:
+                        await self.reloadBankAccountsFromRealtime()
+
+                        AppLogger.shared.info(
+                            "Realtime bank account INSERT received",
+                            category: .realtime
+                        )
+
+                    case .update:
+                        await self.reloadBankAccountsFromRealtime()
+
+                        AppLogger.shared.info(
+                            "Realtime bank account UPDATE received",
+                            category: .realtime
+                        )
+
+                    case .delete:
+                        await self.reloadBankAccountsFromRealtime()
+
+                        AppLogger.shared.info(
+                            "Realtime bank account DELETE received",
+                            category: .realtime
+                        )
+                    }
+                }
+            }
+
+            try await channel.subscribeWithError()
+
+            AppLogger.shared.info(
+                "Bank Accounts Realtime subscribed",
+                category: .realtime
+            )
+
+        } catch {
+            AppLogger.shared.error(
+                "Bank Accounts Realtime failed: \(error.localizedDescription)",
+                category: .realtime
+            )
+        }
+    }
+
+    // MARK: - Reload bank accounts after Realtime
+
+    private func reloadBankAccountsFromRealtime() async {
+
+        do {
+            bankAccounts = try await downloadBankAccounts()
+
+            AppLogger.shared.info(
+                "Bank accounts updated from Realtime",
+                category: .realtime
+            )
+
+        } catch {
+            AppLogger.shared.error(
+                "Failed to reload bank accounts from Realtime: \(error.localizedDescription)",
+                category: .realtime
+            )
+        }
+    }
+
+    // MARK: - Stop Realtime bank accounts
+
+    func stopBankAccountsRealtime() async {
+
+        guard let channel = bankAccountsChannel else {
+            return
+        }
+
+        await client.removeChannel(channel)
+
+        bankAccountsChannel = nil
+
+        AppLogger.shared.info(
+            "Bank Accounts Realtime unsubscribed",
+            category: .realtime
+        )
+    }
 
     // MARK: - Apply realtime profile
 

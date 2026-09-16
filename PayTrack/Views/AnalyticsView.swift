@@ -21,6 +21,8 @@ struct AnalyticsView: View {
     
     @ObservedObject
     private var authService = AuthService.shared
+    @ObservedObject
+    private var syncService = SyncService.shared
     
     @FetchRequest(
         sortDescriptors: [
@@ -291,11 +293,17 @@ struct AnalyticsView: View {
 
 
     private func filteredExpenses() -> [Expense] {
-
         let calendar = Calendar.current
+
+        let enabledPlaidAccountIDs = Set(
+            syncService.bankAccounts
+                .filter { $0.isEnabled }
+                .map { $0.plaidAccountID }
+        )
 
         return expenses.filter { expense in
 
+            // MARK: Owner filter
             if let userID = authService.user?.id {
                 guard expense.userID == userID else {
                     return false
@@ -306,6 +314,17 @@ struct AnalyticsView: View {
                 }
             }
 
+            // MARK: Bank account filter
+            if expense.source == "plaid" {
+                guard
+                    let plaidAccountID = expense.plaidAccountID,
+                    enabledPlaidAccountIDs.contains(plaidAccountID)
+                else {
+                    return false
+                }
+            }
+
+            // MARK: Month filter
             guard let date = expense.date else {
                 return false
             }

@@ -199,5 +199,11 @@
 "bank_account_cash_management" = "Cash Management";
 "bank_account_tfsa" = "TFSA";
 "bank_account_rrsp" = "RRSP";
+"bank_accounts" = "Bank Accounts";
+"bank_accounts_none" = "No bank accounts";
+"bank_account" = "Bank Account";
+"account_enabled" = "Account enabled";
+"bank_account_other" = "Other account";
+"currency_other" = "Other currency";
 
 
