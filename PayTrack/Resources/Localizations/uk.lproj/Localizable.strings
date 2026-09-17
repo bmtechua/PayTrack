@@ -206,3 +206,38 @@
 "bank_account_other" = "Інший рахунок";
 "currency_other" = "Інша валюта";
 
+"bank_connection_country" = "Країна";
+"country_canada" = "Канада";
+"country_united_states" = "США";
+"country_united_kingdom" = "Велика Британія";
+"country_france" = "Франція";
+"country_germany" = "Німеччина";
+"country_spain" = "Іспанія";
+"country_portugal" = "Португалія";
+"country_italy" = "Італія";
+"country_netherlands" = "Нідерланди";
+"country_belgium" = "Бельгія";
+"country_austria" = "Австрія";
+"country_ireland" = "Ірландія";
+"country_poland" = "Польща";
+"country_denmark" = "Данія";
+"country_norway" = "Норвегія";
+"country_sweden" = "Швеція";
+"country_finland" = "Фінляндія";
+"country_estonia" = "Естонія";
+"country_lithuania" = "Литва";
+"country_latvia" = "Латвія";
+
+"bank_connection_country" = "Країна банку";
+"bank_connection_accounts" = "рах.";
+"bank_connection_delete_title" = "Видалити банк?";
+"bank_connection_delete_message" = "Банк буде від’єднано від PayTrack. Імпортовані витрати залишаться.";
+"delete" = "Видалити";
+"cancel" = "Скасувати";
+"error" = "Помилка";
+"unknown" = "Невідомо";
+"bank_connection_status_active" = "Активний";
+"bank_connection_status_inactive" = "Неактивний";
+"bank_connection_account_one" = "%d рахунок";
+"bank_connection_accounts_many" = "%d рахунки";
+

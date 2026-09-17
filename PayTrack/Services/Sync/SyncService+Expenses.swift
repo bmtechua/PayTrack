@@ -28,8 +28,11 @@ extension SyncService {
             }
 
             expense.userID = user.id
+
             var remoteID = expenseID.uuidString
 
+            // Plaid expense:
+            // find existing expense by transaction_id
             if expense.source == "plaid",
                let transactionID = expense.transactionID,
                !transactionID.isEmpty {
@@ -53,6 +56,7 @@ extension SyncService {
                 )
 
                 if let existingExpense = existingExpenses.first {
+
                     remoteID = existingExpense.id.uuidString
 
                     if expense.id != existingExpense.id {
@@ -63,6 +67,105 @@ extension SyncService {
 
             let categoryID = expense.category?.id?.uuidString
 
+            let dateString = ISO8601DateFormatter().string(
+                from: expense.date ?? Date()
+            )
+
+            let title = expense.title ?? ""
+            let amount = expense.amount
+            let merchantName = expense.merchantName
+            let source = expense.source
+            let transactionID = expense.transactionID
+            let plaidAccountID = expense.plaidAccountID
+
+            struct ExistingExpense: Decodable {
+                let id: UUID
+                let title: String?
+                let amount: Double
+                let date: String
+                let categoryID: UUID?
+                let merchantName: String?
+                let source: String?
+                let transactionID: String?
+                let plaidAccountID: String?
+
+                enum CodingKeys: String, CodingKey {
+                    case id
+                    case title
+                    case amount
+                    case date
+                    case categoryID = "category_id"
+                    case merchantName = "merchant_name"
+                    case source
+                    case transactionID = "transaction_id"
+                    case plaidAccountID = "plaid_account_id"
+                }
+            }
+
+            let existingResponse = try await client
+                .from("expenses")
+                .select("""
+                    id,
+                    title,
+                    amount,
+                    date,
+                    category_id,
+                    merchant_name,
+                    source,
+                    transaction_id,
+                    plaid_account_id
+                """)
+                .eq("id", value: remoteID)
+                .eq("user_id", value: user.id.uuidString)
+                .limit(1)
+                .execute()
+
+            let existingExpenses = try JSONDecoder().decode(
+                [ExistingExpense].self,
+                from: existingResponse.data
+            )
+
+            if let existing = existingExpenses.first {
+                
+                let localDateString = ISO8601DateFormatter().string(
+                    from: expense.date ?? Date()
+                )
+
+                let normalizedExistingDate =
+                    existing.date.replacingOccurrences(
+                        of: "+00:00",
+                        with: "Z"
+                    )
+
+                let normalizedLocalDate =
+                    localDateString.replacingOccurrences(
+                        of: "+00:00",
+                        with: "Z"
+                    )
+
+                let unchanged =
+                    existing.title == title &&
+                    existing.amount == amount &&
+                    normalizedExistingDate == normalizedLocalDate &&
+                    existing.categoryID?.uuidString == categoryID &&
+                    existing.merchantName == merchantName &&
+                    existing.source == source &&
+                    existing.transactionID == transactionID &&
+                    existing.plaidAccountID == plaidAccountID
+
+                if unchanged {
+
+                    try context.save()
+
+                    AppLogger.shared.info(
+                        "Expense unchanged, skipped Supabase update: \(title)",
+                        category: .sync
+                    )
+
+                    return
+                }
+            }
+
             let data: [String: AnyJSON] = [
 
                 "id": .string(remoteID),
@@ -72,43 +175,40 @@ extension SyncService {
                 ),
 
                 "title": .string(
-                    expense.title ?? ""
+                    title
                 ),
 
                 "amount": .double(
-                    expense.amount
+                    amount
                 ),
 
                 "date": .string(
-                    ISO8601DateFormatter().string(
-                        from: expense.date ?? Date()
-                    )
+                    dateString
                 ),
 
                 "category_id": categoryID.map {
                     .string($0)
                 } ?? .null,
 
-                "merchant_name": expense.merchantName.map {
+                "merchant_name": merchantName.map {
                     .string($0)
                 } ?? .null,
 
-                "source": expense.source.map {
+                "source": source.map {
                     .string($0)
                 } ?? .null,
 
-                "transaction_id": expense.transactionID.map {
+                "transaction_id": transactionID.map {
                     .string($0)
                 } ?? .null,
-                
-                "plaid_account_id": expense.plaidAccountID.map {
+
+                "plaid_account_id": plaidAccountID.map {
                     .string($0)
                 } ?? .null
-                
             ]
-            
+
             AppLogger.shared.info(
-                "[SUPABASE] \(expense.title ?? "No title") → plaid_account_id: \(expense.plaidAccountID ?? "nil")",
+                "[SUPABASE] \(title) → plaid_account_id: \(plaidAccountID ?? "nil")",
                 category: .sync
             )
 
@@ -120,7 +220,7 @@ extension SyncService {
             try context.save()
 
             AppLogger.shared.info(
-                "Expense synced successfully: \(expense.title ?? "No title")",
+                "Expense synced successfully: \(title)",
                 category: .sync
             )
 

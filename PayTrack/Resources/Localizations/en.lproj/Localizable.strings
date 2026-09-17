@@ -206,4 +206,39 @@
 "bank_account_other" = "Other account";
 "currency_other" = "Other currency";
 
+"bank_connection_country" = "Country";
+"country_canada" = "Canada";
+"country_united_states" = "United States";
+"country_united_kingdom" = "United Kingdom";
+"country_france" = "France";
+"country_germany" = "Germany";
+"country_spain" = "Spain";
+"country_portugal" = "Portugal";
+"country_italy" = "Italy";
+"country_netherlands" = "Netherlands";
+"country_belgium" = "Belgium";
+"country_austria" = "Austria";
+"country_ireland" = "Ireland";
+"country_poland" = "Poland";
+"country_denmark" = "Denmark";
+"country_norway" = "Norway";
+"country_sweden" = "Sweden";
+"country_finland" = "Finland";
+"country_estonia" = "Estonia";
+"country_lithuania" = "Lithuania";
+"country_latvia" = "Latvia";
+
+"bank_connection_country" = "Bank country";
+"bank_connection_accounts" = "accounts";
+"bank_connection_delete_title" = "Delete bank?";
+"bank_connection_delete_message" = "The bank will be disconnected from PayTrack. Imported expenses will remain.";
+"delete" = "Delete";
+"cancel" = "Cancel";
+"error" = "Error";
+"unknown" = "Unknown";
+"bank_connection_status_active" = "Active";
+"bank_connection_status_inactive" = "Inactive";
+"bank_connection_account_one" = "%d account";
+"bank_connection_accounts_many" = "%d accounts";
+
 

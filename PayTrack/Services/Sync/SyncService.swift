@@ -27,6 +27,7 @@ final class SyncService: ObservableObject {
     var profileChannel: RealtimeChannelV2?
     
     var bankAccountsChannel: RealtimeChannelV2?
+    private var isReloadingBankAccountsFromRealtime = false
 
     var fullSyncTask: Task<Void, Never>?
     

@@ -297,9 +297,11 @@ extension SyncService {
                 transactionID
         }
         
-        if case let .string(value) =
-            remoteExpense["plaid_account_id"] {
-            expense.plaidAccountID = value
+        if expense.source == "plaid" {
+            if case let .string(value) = remoteExpense["plaid_account_id"],
+               !value.isEmpty {
+                expense.plaidAccountID = value
+            }
         } else {
             expense.plaidAccountID = nil
         }
@@ -1749,11 +1751,6 @@ extension SyncService {
             try Task.checkCancellation()
             
             bankAccounts = try await downloadBankAccounts()
-
-            AppLogger.shared.info(
-                "Bank accounts loaded: \(bankAccounts.count)",
-                category: .sync
-            )
 
 
             AppLogger.shared.info(

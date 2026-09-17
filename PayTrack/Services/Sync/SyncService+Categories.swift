@@ -29,8 +29,63 @@ extension SyncService {
             }
 
             // This category belongs to the Premium user.
-
             category.userID = user.id
+
+            let name = category.name ?? ""
+            let icon = category.icon
+            let isDefault = category.is_default
+
+            struct ExistingCategory: Decodable {
+                let id: UUID
+                let name: String?
+                let icon: String?
+                let isDefault: Bool
+
+                enum CodingKeys: String, CodingKey {
+                    case id
+                    case name
+                    case icon
+                    case isDefault = "is_default"
+                }
+            }
+
+            let response = try await client
+                .from("categories")
+                .select("""
+                    id,
+                    name,
+                    icon,
+                    is_default
+                """)
+                .eq("id", value: categoryID.uuidString)
+                .eq("user_id", value: user.id.uuidString)
+                .limit(1)
+                .execute()
+
+            let existingCategories = try JSONDecoder().decode(
+                [ExistingCategory].self,
+                from: response.data
+            )
+
+            if let existing = existingCategories.first {
+
+                let unchanged =
+                    existing.name == name &&
+                    existing.icon == icon &&
+                    existing.isDefault == isDefault
+
+                if unchanged {
+
+                    try context.save()
+
+                    AppLogger.shared.info(
+                        "Category unchanged, skipped Supabase update: \(name)",
+                        category: .sync
+                    )
+
+                    return
+                }
+            }
 
             let data: [String: AnyJSON] = [
 
@@ -43,15 +98,15 @@ extension SyncService {
                 ),
 
                 "name": .string(
-                    category.name ?? ""
+                    name
                 ),
 
-                "icon": category.icon.map {
+                "icon": icon.map {
                     .string($0)
                 } ?? .null,
 
                 "is_default": .bool(
-                    category.is_default
+                    isDefault
                 )
             ]
 
@@ -63,7 +118,7 @@ extension SyncService {
             try context.save()
 
             AppLogger.shared.info(
-                "Category synced successfully: \(category.name ?? "No name")",
+                "Category synced successfully: \(name)",
                 category: .sync
             )
 

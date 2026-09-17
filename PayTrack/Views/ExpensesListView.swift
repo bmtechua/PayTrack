@@ -35,12 +35,6 @@ struct ExpensesListView: View {
     // MARK: - Visible Expenses
 
     private var visibleExpenses: [Expense] {
-
-        AppLogger.shared.info(
-            "[EXPENSES] visibleExpenses recalculated. Bank accounts: \(syncService.bankAccounts.count)",
-            category: .sync
-        )
-
         guard let userID = authService.user?.id else {
             return expenses.filter {
                 $0.userID == nil
@@ -52,41 +46,36 @@ struct ExpensesListView: View {
                 .filter { $0.isEnabled }
                 .map { $0.plaidAccountID }
         )
-
-        let plaidExpenses = expenses.filter {
-            $0.userID == userID && $0.source == "plaid"
-        }
-
-        let hiddenExpenses = plaidExpenses.filter { expense in
-
-            guard let accountID = expense.plaidAccountID else {
-                return false
-            }
-
-            return !enabledPlaidAccountIDs.contains(accountID)
-        }
-
+        
         AppLogger.shared.info(
-            "[EXPENSES] Enabled Plaid accounts: \(enabledPlaidAccountIDs.count), " +
-            "Plaid expenses: \(plaidExpenses.count), " +
-            "Hidden disabled-account expenses: \(hiddenExpenses.count)",
-            category: .sync
+            """
+            [EXPENSES LIST]
+            enabledPlaidAccounts:
+            \(enabledPlaidAccountIDs)
+
+            allBankAccounts:
+            \(syncService.bankAccounts.map {
+                "\($0.name ?? "nil") | \($0.plaidAccountID) | enabled=\($0.isEnabled)"
+            })
+            """
         )
 
         return expenses.filter { expense in
-
             guard expense.userID == userID else {
                 return false
             }
 
+            // Manual / local expense
             guard expense.source == "plaid" else {
                 return true
             }
 
+            // Plaid expense without account must be hidden
             guard let accountID = expense.plaidAccountID else {
-                return true
+                return false
             }
 
+            // Show only if its bank account is enabled
             return enabledPlaidAccountIDs.contains(accountID)
         }
     }
@@ -151,11 +140,6 @@ struct ExpensesListView: View {
     // MARK: - Body
 
     var body: some View {
-
-        let _ = AppLogger.shared.info(
-            "[EXPENSES] BODY rendered. Bank accounts: \(syncService.bankAccounts.count)",
-            category: .sync
-        )
 
         NavigationStack {
 

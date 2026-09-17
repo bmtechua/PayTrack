@@ -192,6 +192,7 @@ struct HomeView: View {
     // MARK: - FILTER
 
     private func filteredExpenses() -> [Expense] {
+
         let calendar = Calendar.current
 
         let enabledPlaidAccountIDs = Set(
@@ -199,10 +200,11 @@ struct HomeView: View {
                 .filter { $0.isEnabled }
                 .map { $0.plaidAccountID }
         )
-
+        
         return expenses.filter { expense in
 
             // MARK: Owner filter
+
             if let userID = authService.user?.id {
                 guard expense.userID == userID else {
                     return false
@@ -214,7 +216,9 @@ struct HomeView: View {
             }
 
             // MARK: Bank account filter
+
             if expense.source == "plaid" {
+
                 guard
                     let plaidAccountID = expense.plaidAccountID,
                     enabledPlaidAccountIDs.contains(plaidAccountID)
@@ -224,6 +228,7 @@ struct HomeView: View {
             }
 
             // MARK: Month filter
+
             guard let date = expense.date else {
                 return false
             }
@@ -234,15 +239,17 @@ struct HomeView: View {
                 toGranularity: .month
             )
         }
-    }
-    // MARK: - TOTAL
+    }    // MARK: - TOTAL
 
     private func monthTotal() -> Double {
+        let currentExpenses = filteredExpenses()
 
-        filteredExpenses()
-            .reduce(0) {
-                $0 + $1.amount
-            }
+        for expense in currentExpenses {
+        }
+
+        return currentExpenses.reduce(0) {
+            $0 + $1.amount
+        }
     }
 
     private func todayTotal() -> Double {

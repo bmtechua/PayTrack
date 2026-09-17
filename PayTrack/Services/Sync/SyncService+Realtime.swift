@@ -314,7 +314,7 @@ extension SyncService {
             category: .realtime
         )
     }
-    
+
     // MARK: - Realtime bank accounts
 
     func startBankAccountsRealtime() async {
@@ -339,34 +339,33 @@ extension SyncService {
             bankAccountsChannel = channel
 
             Task { @MainActor in
-
                 for await change in changes {
 
                     switch change {
 
                     case .insert:
-                        await self.reloadBankAccountsFromRealtime()
-
                         AppLogger.shared.info(
                             "Realtime bank account INSERT received",
                             category: .realtime
                         )
 
-                    case .update:
                         await self.reloadBankAccountsFromRealtime()
 
+                    case .update:
                         AppLogger.shared.info(
                             "Realtime bank account UPDATE received",
                             category: .realtime
                         )
 
-                    case .delete:
                         await self.reloadBankAccountsFromRealtime()
 
+                    case .delete:
                         AppLogger.shared.info(
                             "Realtime bank account DELETE received",
                             category: .realtime
                         )
+
+                        await self.reloadBankAccountsFromRealtime()
                     }
                 }
             }
