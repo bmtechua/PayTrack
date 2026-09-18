@@ -8,7 +8,6 @@
 import Foundation
 
 struct PlaidExpense: Codable {
-
     let transactionID: String?
     let accountID: String?
     let amount: Double
@@ -21,7 +20,6 @@ struct PlaidExpense: Codable {
     let source: String
 
     enum CodingKeys: String, CodingKey {
-
         case transactionID = "transaction_id"
         case accountID = "account_id"
         case amount
@@ -35,35 +33,28 @@ struct PlaidExpense: Codable {
     }
 }
 
-
 // MARK: - Plaid removed transaction
 
 struct PlaidRemovedExpense: Codable {
-
     let transactionID: String?
     let accountID: String?
 
     enum CodingKeys: String, CodingKey {
-
         case transactionID = "transaction_id"
         case accountID = "account_id"
     }
 }
 
-
 // MARK: - Plaid sync response
 
 struct PlaidExpensesResponse: Codable {
-
     let added: [PlaidExpense]
     let modified: [PlaidExpense]
     let removed: [PlaidRemovedExpense]
-
     let hasMore: Bool
     let nextCursor: String
 
     enum CodingKeys: String, CodingKey {
-
         case added
         case modified
         case removed
@@ -72,16 +63,13 @@ struct PlaidExpensesResponse: Codable {
     }
 }
 
-
 // MARK: - Plaid changes
 
 struct PlaidExpenseChanges {
-
     let added: [PlaidExpense]
     let modified: [PlaidExpense]
     let removed: [PlaidRemovedExpense]
 }
-
 
 // MARK: - Service
 
@@ -91,7 +79,6 @@ final class PlaidExpenseService {
     static let shared = PlaidExpenseService()
 
     private init() {}
-
 
     // MARK: - Fetch Plaid changes
 
@@ -106,8 +93,7 @@ final class PlaidExpenseService {
         #endif
 
         guard let url = URL(
-            string:
-                "\(baseURL)/api/plaid/transactions/\(connectionID)/expenses/"
+            string: "\(baseURL)/api/plaid/transactions/\(connectionID)/expenses/"
         ) else {
             throw URLError(.badURL)
         }
@@ -169,8 +155,6 @@ final class PlaidExpenseService {
             removed: result.removed
         )
     }
-
-
 
     // MARK: - Compatibility method
 

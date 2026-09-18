@@ -239,5 +239,10 @@
 "bank_connection_status_active" = "Активний";
 "bank_connection_status_inactive" = "Неактивний";
 "bank_connection_account_one" = "%d рахунок";
-"bank_connection_accounts_many" = "%d рахунки";
+"bank_connection_accounts_many" = "%d рахунків";
+"bank_connection_accounts_few" = "%d рахунки";
+"bank_connection_status_active" = "Активний";
+"bank_connection_status_inactive" = "Неактивний";
+"bank_connection_status_unknown" = "Невідомий";
+
 

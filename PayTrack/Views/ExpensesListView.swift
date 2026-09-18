@@ -60,22 +60,91 @@ struct ExpensesListView: View {
             """
         )
 
-        return expenses.filter { expense in
-            guard expense.userID == userID else {
+//        return expenses.filter { expense in
+//            guard expense.userID == userID else {
+//                return false
+//            }
+//
+//            // Manual / local expense
+//            guard expense.source == "plaid" else {
+//                return true
+//            }
+//
+//            // Plaid expense without account must be hidden
+//            guard let accountID = expense.plaidAccountID else {
+//                return false
+//            }
+//
+//            // Show only if its bank account is enabled
+//            return enabledPlaidAccountIDs.contains(accountID)
+//        }
+        
+        let userExpenses = expenses.filter {
+            $0.userID == userID
+        }
+
+        let manualExpenses = userExpenses.filter {
+            $0.source != "plaid"
+        }
+
+        let plaidExpenses = userExpenses.filter {
+            $0.source == "plaid"
+        }
+
+        let plaidWithAccount = plaidExpenses.filter {
+            $0.plaidAccountID != nil
+        }
+
+        let plaidWithoutAccount = plaidExpenses.filter {
+            $0.plaidAccountID == nil
+        }
+
+        let plaidEnabled = plaidWithAccount.filter {
+            guard let accountID = $0.plaidAccountID else {
                 return false
             }
 
-            // Manual / local expense
+            return enabledPlaidAccountIDs.contains(accountID)
+        }
+
+        let plaidDisabled = plaidWithAccount.filter {
+            guard let accountID = $0.plaidAccountID else {
+                return false
+            }
+
+            return !enabledPlaidAccountIDs.contains(accountID)
+        }
+
+        AppLogger.shared.info(
+            """
+            [EXPENSES LIST DEBUG]
+            CoreData total: \(expenses.count)
+            User expenses: \(userExpenses.count)
+            Manual: \(manualExpenses.count)
+            Plaid: \(plaidExpenses.count)
+            Plaid with account: \(plaidWithAccount.count)
+            Plaid without account: \(plaidWithoutAccount.count)
+            Plaid enabled: \(plaidEnabled.count)
+            Plaid disabled/not found: \(plaidDisabled.count)
+            Visible expected: \(manualExpenses.count + plaidEnabled.count)
+
+            Enabled account IDs:
+            \(enabledPlaidAccountIDs)
+
+            Loaded bank accounts:
+            \(syncService.bankAccounts.count)
+            """
+        )
+
+        return userExpenses.filter { expense in
             guard expense.source == "plaid" else {
                 return true
             }
 
-            // Plaid expense without account must be hidden
             guard let accountID = expense.plaidAccountID else {
                 return false
             }
 
-            // Show only if its bank account is enabled
             return enabledPlaidAccountIDs.contains(accountID)
         }
     }
@@ -93,6 +162,48 @@ struct ExpensesListView: View {
             ) { expense in
                 calendar.startOfDay(
                     for: expense.date ?? Date()
+                )
+            }
+            
+            AppLogger.shared.info(
+                """
+                [EXPENSES GROUP DEBUG]
+                Visible expenses: \(visibleExpenses.count)
+                Groups: \(grouped.count)
+                Group sizes: \(grouped.values.map { $0.count }.sorted(by: >))
+                """
+            )
+            
+            let expenseIDs = visibleExpenses.compactMap { $0.id }
+
+            let duplicateIDs = Dictionary(
+                grouping: expenseIDs,
+                by: { $0 }
+            )
+            .filter { $1.count > 1 }
+
+            AppLogger.shared.info(
+                """
+                [EXPENSES ID DEBUG]
+                Visible expenses: \(visibleExpenses.count)
+                IDs: \(expenseIDs.count)
+                Unique IDs: \(Set(expenseIDs).count)
+                Duplicate ID groups: \(duplicateIDs.count)
+                """
+            )
+
+            for (id, ids) in duplicateIDs {
+                let duplicateExpenses = visibleExpenses.filter {
+                    $0.id == id
+                }
+
+                AppLogger.shared.info(
+                    """
+                    [EXPENSES DUPLICATE ID]
+                    id=\(id)
+                    count=\(duplicateExpenses.count)
+                    titles=\(duplicateExpenses.map { $0.title ?? "nil" })
+                    """
                 )
             }
 
@@ -153,7 +264,8 @@ struct ExpensesListView: View {
                     Section {
 
                         ForEach(
-                            group.expenses
+                            group.expenses,
+                            id: \.objectID
                         ) { expense in
 
                             Button {
@@ -347,13 +459,16 @@ private struct ExpenseRowView: View {
                 // Bank account for Plaid expenses
 
                 if let bankAccount {
+                    HStack(spacing: 5) {
+                        Image(systemName: "building.columns.fill")
 
-                    Text(
-                        "\(bankAccount.name ?? "Bank account")" +
-                        (bankAccount.mask.map {
-                            " ••••\($0)"
-                        } ?? "")
-                    )
+                        Text(
+                            "\(bankAccount.name ?? "Bank account")" +
+                            (bankAccount.mask.map {
+                                " ••••\($0)"
+                            } ?? "")
+                        )
+                    }
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 }

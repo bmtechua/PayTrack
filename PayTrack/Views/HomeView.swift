@@ -242,12 +242,7 @@ struct HomeView: View {
     }    // MARK: - TOTAL
 
     private func monthTotal() -> Double {
-        let currentExpenses = filteredExpenses()
-
-        for expense in currentExpenses {
-        }
-
-        return currentExpenses.reduce(0) {
+        filteredExpenses().reduce(0) {
             $0 + $1.amount
         }
     }

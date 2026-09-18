@@ -14,7 +14,6 @@ struct BankConnectionView: View {
     // MARK: - Bank connection model
 
     struct BankConnection: Decodable, Identifiable {
-
         let id: UUID
         let institutionName: String?
         let status: String
@@ -61,6 +60,12 @@ struct BankConnectionView: View {
     @State
     private var selectedCountryCode = "CA"
 
+    @State
+    private var connectionsLoadTask: Task<Void, Never>?
+
+    @ObservedObject
+    private var syncService = SyncService.shared
+
     // MARK: - Plaid countries
 
     private let plaidCountries: [
@@ -91,361 +96,315 @@ struct BankConnectionView: View {
     // MARK: - Body
 
     var body: some View {
-
         List {
-
-            // MARK: - Connected banks
-
-            Section("bank_connection_connected") {
-
-                if isLoadingConnections && connections.isEmpty {
-
-                    HStack {
-                        Spacer()
-
-                        ProgressView()
-
-                        Spacer()
-                    }
-
-                } else if connections.isEmpty {
-
-                    Text("bank_connection_none")
-                        .foregroundStyle(.secondary)
-
-                } else {
-
-                    ForEach(connections) { connection in
-
-                        NavigationLink {
-
-                            BankAccountsView(
-                                connection: connection
-                            )
-
-                        } label: {
-
-                            VStack(
-                                alignment: .leading,
-                                spacing: 6
-                            ) {
-
-                                // Bank name
-                                Text(
-                                    connection.institutionDisplayName
-                                )
-                                .font(.headline)
-
-                                HStack {
-
-                                    // Localized status
-                                    Text(
-                                        connectionStatusText(
-                                            connection.status
-                                        )
-                                    )
-                                    .font(.caption)
-                                    .foregroundStyle(
-                                        connection.status
-                                            .lowercased() == "active"
-                                        ? .green
-                                        : .secondary
-                                    )
-
-                                    Spacer()
-
-                                    // Account count
-                                    let accountCount =
-                                        SyncService.shared.bankAccounts
-                                            .filter {
-                                                $0.connectionID == connection.id
-                                            }
-                                            .count
-
-                                    if accountCount > 0 {
-
-                                        Text(
-                                            accountCountText(
-                                                accountCount
-                                            )
-                                        )
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    }
-
-                                    // Connection date
-                                    Text(
-                                        connection.createdAt,
-                                        format: .dateTime
-                                            .year()
-                                            .month(.twoDigits)
-                                            .day(.twoDigits)
-                                    )
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
-
-                        // MARK: - Delete bank
-
-                        .swipeActions(
-                            edge: .trailing,
-                            allowsFullSwipe: false
-                        ) {
-
-                            Button(role: .destructive) {
-
-                                connectionToDelete = connection
-                                showDeleteConfirmation = true
-
-                            } label: {
-
-                                Label(
-                                    "delete",
-                                    systemImage: "trash"
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // MARK: - Add bank
-
-            Section("bank_connection_country") {
-
-                Picker(
-                    "bank_connection_country",
-                    selection: $selectedCountryCode
-                ) {
-
-                    ForEach(
-                        plaidCountries,
-                        id: \.code
-                    ) { country in
-
-                        Text(country.nameKey)
-                            .tag(country.code)
-                    }
-                }
-
-                Button {
-
-                    AppLogger.shared.info(
-                        "Bank connection requested: country=\(selectedCountryCode)"
-                    )
-
-                    getLinkToken()
-
-                } label: {
-
-                    Label(
-                        "bank_connection_plaid",
-                        systemImage: "building.columns"
-                    )
-                }
-            }
+            connectedBanksSection
+            addBankSection
         }
-
         .navigationTitle("bank_connection")
-
-        // MARK: - Load connections
-
         .task {
-
-            await loadConnections()
+            startConnectionsLoading()
         }
-
-        // MARK: - Reload after Plaid
-
         .onChange(of: showPlaid) { _, isPresented in
-
-            if !isPresented {
-
-                Task {
-                    await loadConnections()
-                }
-            }
+            handlePlaidPresentationChange(isPresented)
         }
-
-        // MARK: - Plaid Link
-
         .sheet(isPresented: $showPlaid) {
-
-            if let session = plaidManager.linkSession {
-
-                session.sheet()
-            }
+            plaidSheet
         }
-
-        // MARK: - Delete confirmation
-
         .alert(
             "bank_connection_delete_title",
             isPresented: $showDeleteConfirmation
         ) {
-
-            Button(
-                "cancel",
-                role: .cancel
-            ) {
-
-                connectionToDelete = nil
-            }
-
-            Button(
-                "delete",
-                role: .destructive
-            ) {
-
-                guard let connection = connectionToDelete else {
-                    return
-                }
-
-                Task {
-                    await deleteConnection(connection)
-                }
-            }
-
+            deleteConfirmationButtons
         } message: {
-
-            Text(
-                "bank_connection_delete_message"
-            )
+            Text("bank_connection_delete_message")
         }
-
-        // MARK: - Delete error
-
         .alert(
             "error",
-            isPresented: Binding(
-                get: {
-                    deleteError != nil
-                },
-                set: { isPresented in
-
-                    if !isPresented {
-                        deleteError = nil
-                    }
-                }
-            )
+            isPresented: deleteErrorBinding
         ) {
-
             Button(
-                NSLocalizedString(
+                localizedString(
                     "ok",
-                    comment: ""
+                    fallback: "OK"
                 )
             ) {
-
                 deleteError = nil
             }
-
         } message: {
-
-            Text(
-                deleteError ?? ""
-            )
+            Text(deleteError ?? "")
         }
-
-        // MARK: - Plaid error
-
         .alert(
             "bank_connection",
-            isPresented: Binding(
-                get: {
-                    plaidManager.connectionError != nil
-                },
-                set: { isPresented in
-
-                    if !isPresented {
-                        plaidManager.connectionError = nil
-                    }
-                }
-            )
+            isPresented: plaidErrorBinding
         ) {
-
             Button(
-                NSLocalizedString(
+                localizedString(
                     "ok",
-                    comment: ""
+                    fallback: "OK"
                 )
             ) {
-
                 plaidManager.connectionError = nil
             }
-
         } message: {
+            Text(plaidManager.connectionError ?? "")
+        }
+    }
+
+    // MARK: - Connected banks section
+
+    private var connectedBanksSection: some View {
+        Section("bank_connection_connected") {
+            if isLoadingConnections && connections.isEmpty {
+                loadingView
+            } else if connections.isEmpty {
+                emptyConnectionsView
+            } else {
+                ForEach(connections) { connection in
+                    connectionRow(connection)
+                }
+            }
+        }
+    }
+
+    // MARK: - Add bank section
+
+    private var addBankSection: some View {
+        Section("bank_connection_country") {
+            Picker(
+                "bank_connection_country",
+                selection: $selectedCountryCode
+            ) {
+                ForEach(
+                    plaidCountries,
+                    id: \.code
+                ) { country in
+                    Text(country.nameKey)
+                        .tag(country.code)
+                }
+            }
+
+            Button {
+                requestPlaidLink()
+            } label: {
+                Label(
+                    "bank_connection_plaid",
+                    systemImage: "building.columns"
+                )
+            }
+        }
+    }
+
+    // MARK: - Connection row
+
+    private func connectionRow(
+        _ connection: BankConnection
+    ) -> some View {
+        NavigationLink {
+            BankAccountsView(
+                connection: connection
+            )
+        } label: {
+            VStack(
+                alignment: .leading,
+                spacing: 6
+            ) {
+                HStack(spacing: 10) {
+                    Image(
+                        systemName: "building.columns.fill"
+                    )
+                    .foregroundStyle(.secondary)
+
+                    Text(
+                        connection.institutionDisplayName
+                    )
+                    .font(.headline)
+
+                    Spacer()
+                }
+
+                connectionDetails(
+                    for: connection
+                )
+            }
+            .padding(.vertical, 4)
+        }
+        .swipeActions(
+            edge: .trailing,
+            allowsFullSwipe: false
+        ) {
+            Button(role: .destructive) {
+                connectionToDelete = connection
+                showDeleteConfirmation = true
+            } label: {
+                Label(
+                    "delete",
+                    systemImage: "trash"
+                )
+            }
+        }
+    }
+
+    // MARK: - Connection details
+
+    private func connectionDetails(
+        for connection: BankConnection
+    ) -> some View {
+        HStack {
+            Text(
+                connectionStatusText(
+                    connection.status
+                )
+            )
+            .font(.caption)
+            .foregroundStyle(
+                connection.status
+                    .lowercased() == "active"
+                ? .green
+                : .secondary
+            )
+
+            Spacer()
+
+            let accountCount = syncService.bankAccounts
+                .filter {
+                    $0.connectionID == connection.id
+                }
+                .count
+
+            if accountCount > 0 {
+                Text(
+                    accountCountText(
+                        accountCount
+                    )
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
 
             Text(
-                plaidManager.connectionError ?? ""
+                connection.createdAt,
+                format: .dateTime
+                    .year()
+                    .month(.twoDigits)
+                    .day(.twoDigits)
             )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 
-    // MARK: - Localized bank status
+    // MARK: - Loading / Empty
 
-    private func connectionStatusText(
-        _ status: String
-    ) -> String {
-
-        switch status.lowercased() {
-
-        case "active":
-
-            return NSLocalizedString(
-                "bank_connection_status_active",
-                comment: ""
-            )
-
-        case "inactive":
-
-            return NSLocalizedString(
-                "bank_connection_status_inactive",
-                comment: ""
-            )
-
-        default:
-
-            return NSLocalizedString(
-                "bank_connection_status_unknown",
-                comment: ""
-            )
+    private var loadingView: some View {
+        HStack {
+            Spacer()
+            ProgressView()
+            Spacer()
         }
     }
 
-    // MARK: - Localized account count
+    private var emptyConnectionsView: some View {
+        Text("bank_connection_none")
+            .foregroundStyle(.secondary)
+    }
 
-    private func accountCountText(
-        _ count: Int
-    ) -> String {
+    // MARK: - Plaid sheet
 
-        let key: String
+    @ViewBuilder
+    private var plaidSheet: some View {
+        if let session = plaidManager.linkSession {
+            session.sheet()
+        }
+    }
 
-        if count == 1 {
+    // MARK: - Alerts
 
-            key = "bank_connection_account_one"
-
-        } else {
-
-            key = "bank_connection_accounts_many"
+    @ViewBuilder
+    private var deleteConfirmationButtons: some View {
+        Button(
+            "cancel",
+            role: .cancel
+        ) {
+            connectionToDelete = nil
         }
 
-        return String(
-            format: NSLocalizedString(
-                key,
-                comment: ""
-            ),
-            count
+        Button(
+            "delete",
+            role: .destructive
+        ) {
+            guard let connection = connectionToDelete else {
+                return
+            }
+
+            Task {
+                await deleteConnection(
+                    connection
+                )
+            }
+        }
+    }
+
+    private var deleteErrorBinding: Binding<Bool> {
+        Binding(
+            get: {
+                deleteError != nil
+            },
+            set: { isPresented in
+                if !isPresented {
+                    deleteError = nil
+                }
+            }
         )
     }
 
-    // MARK: - Load connections
+    private var plaidErrorBinding: Binding<Bool> {
+        Binding(
+            get: {
+                plaidManager.connectionError != nil
+            },
+            set: { isPresented in
+                if !isPresented {
+                    plaidManager.connectionError = nil
+                }
+            }
+        )
+    }
+
+    // MARK: - Connection loading
+
+    private func startConnectionsLoading() {
+        connectionsLoadTask?.cancel()
+
+        connectionsLoadTask = Task {
+            await loadConnections()
+        }
+    }
+
+    private func handlePlaidPresentationChange(
+        _ isPresented: Bool
+    ) {
+        guard !isPresented else {
+            return
+        }
+
+        connectionsLoadTask?.cancel()
+
+        connectionsLoadTask = Task {
+            // Give backend time to save
+            // the new bank connection.
+            try? await Task.sleep(
+                for: .milliseconds(1000)
+            )
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            await loadConnections()
+        }
+    }
 
     private func loadConnections() async {
-
         isLoadingConnections = true
 
         defer {
@@ -453,7 +412,6 @@ struct BankConnectionView: View {
         }
 
         do {
-
             let user =
                 try await SupabaseManager.shared.client
                     .auth
@@ -480,21 +438,34 @@ struct BankConnectionView: View {
                     )
                     .execute()
 
+            guard !Task.isCancelled else {
+                return
+            }
+
             let decoder = JSONDecoder()
 
             decoder.dateDecodingStrategy = .iso8601
 
-            connections =
+            let decoded =
                 try decoder.decode(
                     [BankConnection].self,
                     from: response.data
                 )
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            connections = decoded
 
             AppLogger.shared.info(
                 "Bank connections loaded: \(connections.count)"
             )
 
         } catch {
+            guard !Task.isCancelled else {
+                return
+            }
 
             AppLogger.shared.error(
                 "Failed to load bank connections: \(error.localizedDescription)"
@@ -507,13 +478,11 @@ struct BankConnectionView: View {
     private func deleteConnection(
         _ connection: BankConnection
     ) async {
-
         do {
-
-            let client = SupabaseManager.shared.client
+            let client =
+                SupabaseManager.shared.client
 
             // 1. Delete bank accounts
-            //    belonging to this connection
 
             try await client
                 .from("bank_accounts")
@@ -541,54 +510,55 @@ struct BankConnectionView: View {
                 $0.id == connection.id
             }
 
+            connectionToDelete = nil
+
             AppLogger.shared.info(
                 "Bank connection deleted: \(connection.institutionDisplayName)"
             )
 
-            connectionToDelete = nil
-
         } catch {
-
             AppLogger.shared.error(
                 "Failed to delete bank connection: \(error.localizedDescription)"
             )
 
-            deleteError = error.localizedDescription
+            deleteError =
+                error.localizedDescription
         }
     }
 
-    // MARK: - Get Plaid Link token
+    // MARK: - Plaid Link
 
-    private func getLinkToken() {
-
+    private func requestPlaidLink() {
         AppLogger.shared.info(
-            "Requesting Plaid Link token"
+            "Bank connection requested: country=\(selectedCountryCode)"
         )
 
         Task {
-
             do {
-
                 let user =
                     try await SupabaseManager.shared.client
                         .auth
                         .session
                         .user
 
-                guard let url = URL(
-                    string:
-                        "http://127.0.0.1:8000/api/plaid/create-link-token/"
-                ) else {
+                #if targetEnvironment(simulator)
+                let baseURL = "http://127.0.0.1:8000"
+                #else
+                let baseURL = "http://10.0.0.239:8000"
+                #endif
 
+                guard let url = URL(
+                    string: "\(baseURL)/api/plaid/create-link-token/"
+                ) else {
                     AppLogger.shared.error(
                         "Plaid Link token URL is invalid"
                     )
-
                     return
                 }
 
-                var request =
-                    URLRequest(url: url)
+                var request = URLRequest(
+                    url: url
+                )
 
                 request.httpMethod = "POST"
 
@@ -598,12 +568,8 @@ struct BankConnectionView: View {
                 )
 
                 let body: [String: Any] = [
-
-                    "user_id":
-                        user.id.uuidString,
-
-                    "country_code":
-                        selectedCountryCode
+                    "user_id": user.id.uuidString,
+                    "country_code": selectedCountryCode
                 ]
 
                 request.httpBody =
@@ -617,20 +583,17 @@ struct BankConnectionView: View {
                     )
 
                 guard let httpResponse =
-                        response as? HTTPURLResponse
+                    response as? HTTPURLResponse
                 else {
-
                     AppLogger.shared.error(
                         "Invalid Django response"
                     )
-
                     return
                 }
 
                 guard (200...299).contains(
                     httpResponse.statusCode
                 ) else {
-
                     AppLogger.shared.error(
                         "Django HTTP error: \(httpResponse.statusCode)"
                     )
@@ -651,13 +614,11 @@ struct BankConnectionView: View {
                     ) as? [String: Any]
 
                 guard let linkToken =
-                        result?["link_token"] as? String
+                    result?["link_token"] as? String
                 else {
-
                     AppLogger.shared.error(
                         "link_token not found in Django response"
                     )
-
                     return
                 }
 
@@ -673,21 +634,123 @@ struct BankConnectionView: View {
                 showPlaid = true
 
             } catch {
-
                 AppLogger.shared.error(
                     "Django error: \(error)"
                 )
             }
         }
     }
+
+    // MARK: - Localization
+
+    private func localizedString(
+        _ key: String,
+        fallback: String
+    ) -> String {
+        let language =
+            UserDefaults.standard.string(
+                forKey: "language"
+            ) ?? "uk"
+
+        guard
+            let path = Bundle.main.path(
+                forResource: language,
+                ofType: "lproj"
+            ),
+            let bundle = Bundle(path: path)
+        else {
+            AppLogger.shared.error(
+                "Localization bundle not found: \(language).lproj"
+            )
+
+            return fallback
+        }
+
+        return NSLocalizedString(
+            key,
+            bundle: bundle,
+            comment: ""
+        )
+    }
+
+    // MARK: - Localized bank status
+
+    private func connectionStatusText(
+        _ status: String
+    ) -> String {
+        let key: String
+
+        switch status.lowercased() {
+        case "active":
+            key = "bank_connection_status_active"
+
+        case "inactive":
+            key = "bank_connection_status_inactive"
+
+        default:
+            key = "bank_connection_status_unknown"
+        }
+
+        return localizedString(
+            key,
+            fallback: status
+        )
+    }
+
+    // MARK: - Localized account count
+
+    private func accountCountText(
+        _ count: Int
+    ) -> String {
+        let language =
+            UserDefaults.standard.string(
+                forKey: "language"
+            ) ?? "uk"
+
+        let key: String
+
+        if language == "uk" {
+            let lastTwo = count % 100
+            let lastOne = count % 10
+
+            if lastTwo >= 11 && lastTwo <= 14 {
+                key = "bank_connection_accounts_many"
+            } else {
+                switch lastOne {
+                case 1:
+                    key = "bank_connection_account_one"
+
+                case 2, 3, 4:
+                    key = "bank_connection_accounts_few"
+
+                default:
+                    key = "bank_connection_accounts_many"
+                }
+            }
+
+        } else {
+            key =
+                count == 1
+                ? "bank_connection_account_one"
+                : "bank_connection_accounts_many"
+        }
+
+        let format = localizedString(
+            key,
+            fallback: "%d accounts"
+        )
+
+        return String(
+            format: format,
+            count
+        )
+    }
 }
 
 // MARK: - Preview
 
 #Preview {
-
     NavigationStack {
-
         BankConnectionView()
     }
 }
